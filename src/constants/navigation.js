@@ -19,7 +19,7 @@ export const SIDEBAR_NAV = [
   { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { label: 'Leads', href: '/admin/leads', icon: TrendingUp },
   { label: 'Complaints', href: '/admin/complaints', icon: AlertCircle },
-  { label: 'SOS', href: '/admin/sos', icon: Siren },
+  // { label: 'SOS', href: '/admin/sos', icon: Siren },
   { label: 'Committee', href: '/admin/committee', icon: UsersRound },
   { label: 'Posts', href: '/admin/posts', icon: Image },
 ];

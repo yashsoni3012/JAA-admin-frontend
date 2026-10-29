@@ -1,23 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
   Plus,
   Search,
   Upload,
-  Phone,
-  Mail,
-  Building2,
-  CalendarDays,
   CheckCircle2,
   X,
 } from 'lucide-react';
-import { getMembers, createMember, updateMemberStatus, MEMBERS } from '@/services/admin.service';
-import { formatDate } from '@/utils/formatDate';
+import { getMembers, createMember, updateMemberStatus, updateMember } from '@/services/admin.service';
 import MemberRow from '@/components/admin/MemberRow';
 import AddMemberModal from '@/components/admin/AddMemberModal';
+import EditMemberModal from '@/components/admin/EditMemberModal';
 import ViewMemberModal from '@/components/admin/ViewMemberModal';
 import RejectMemberModal from '@/components/admin/RejectMemberModal';
 import Button from '@/components/common/Button';
@@ -26,97 +22,154 @@ import Loader from '@/components/common/Loader';
 import { cn } from '@/lib/utils';
 
 const TABS = ['All', 'Pending', 'Approved', 'Rejected'];
-const PAGE_SIZES = [10, 25, 50];
+const PAGE_SIZES = [10, 20, 50];
 
 export default function MembersPage() {
-  const [members, setMembers] = useState(MEMBERS ?? []);
-  const [isLoading, setIsLoading] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  });
+  const [counts, setCounts] = useState({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState(null);
+  const [editingMember, setEditingMember] = useState(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [rejectingMember, setRejectingMember] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const loadMembers = useCallback(async () => {
+  // Debounce search input by 350ms to prevent duplicate API requests
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Load server-side paginated members from backend API
+  const loadMembers = useCallback(async (targetPage = 1, targetSize = 20, targetTab = 'All', targetSearch = '') => {
+    setIsFetching(true);
     try {
-      const data = await getMembers();
-      if (Array.isArray(data) && data.length > 0) {
-        setMembers(data);
+      const data = await getMembers({
+        page: targetPage,
+        limit: targetSize,
+        status: targetTab,
+        search: targetSearch,
+      });
+
+      const list = data.members || (Array.isArray(data) ? data : []);
+      setMembers(list);
+
+      if (data.pagination) {
+        setPagination({
+          total: data.pagination.total ?? list.length,
+          page: data.pagination.page ?? targetPage,
+          limit: data.pagination.limit ?? targetSize,
+          totalPages: data.pagination.totalPages ?? Math.max(1, Math.ceil((data.pagination.total ?? list.length) / targetSize)),
+          hasNext: Boolean(data.pagination.hasNext),
+          hasPrev: Boolean(data.pagination.hasPrev),
+        });
+      } else {
+        const total = data.total ?? list.length;
+        setPagination({
+          total,
+          page: targetPage,
+          limit: targetSize,
+          totalPages: Math.max(1, Math.ceil(total / targetSize)),
+          hasNext: targetPage * targetSize < total,
+          hasPrev: targetPage > 1,
+        });
+      }
+
+      if (data.counts) {
+        setCounts(data.counts);
       }
     } catch (err) {
       console.error('Failed to load members from API:', err);
+    } finally {
+      setIsLoading(false);
+      setIsFetching(false);
     }
   }, []);
 
+  // Fetch from server whenever page, pageSize, activeTab, or debouncedSearch changes
   useEffect(() => {
-    loadMembers();
-  }, [loadMembers]);
+    loadMembers(page, pageSize, activeTab, debouncedSearch);
+  }, [loadMembers, page, pageSize, activeTab, debouncedSearch]);
 
-  // Count shown in each tab label, e.g. "Pending(22)".
-  const countFor = (tab) =>
-    tab === 'All' ? members.length : members.filter((m) => m.status === tab).length;
+  // Count shown in each tab label, e.g. "Pending(5)"
+  const countFor = (tab) => {
+    if (!counts) return 0;
+    switch (tab) {
+      case 'All':
+        return counts.all ?? 0;
+      case 'Pending':
+        return counts.pending ?? 0;
+      case 'Approved':
+        return counts.approved ?? 0;
+      case 'Rejected':
+        return counts.rejected ?? 0;
+      default:
+        return 0;
+    }
+  };
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return members.filter((m) => {
-      const matchesTab = activeTab === 'All' || m.status === activeTab;
-      const matchesSearch =
-        !query || [m.name, m.business, m.mobile].some((value) => value.toLowerCase().includes(query));
-      return matchesTab && matchesSearch;
-    });
-  }, [members, activeTab, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const pageItems = filtered.slice(startIndex, startIndex + pageSize);
-
-  // Show a window of up to 3 page numbers, like the reference (1 2 3).
-  const windowStart = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
-  const pageNumbers = Array.from({ length: Math.min(3, totalPages) }, (_, i) => windowStart + i);
-
-  // Changing a filter always returns to page 1.
+  // Changing tabs or search resets to page 1
   const changeTab = (tab) => {
+    if (tab === activeTab) return;
     setActiveTab(tab);
     setPage(1);
   };
+
   const changeSearch = (value) => {
     setSearch(value);
     setPage(1);
   };
+
   const changePageSize = (size) => {
     setPageSize(size);
     setPage(1);
   };
 
-  const updateStatus = useCallback((id, status, reason = '') => {
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === id ? { ...m, status, rejectionReason: reason || m.rejectionReason } : m
-      )
-    );
-    setSelected((prev) =>
-      prev && prev.id === id ? { ...prev, status, rejectionReason: reason || prev.rejectionReason } : prev
-    );
-  }, []);
+  // Pagination calculation
+  const totalItems = pagination.total ?? 0;
+  const totalPages = Math.max(1, pagination.totalPages ?? Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+
+  // Window of up to 3 page numbers (e.g. 1 2 3)
+  const windowStart = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
+  const pageNumbers = Array.from(
+    { length: Math.min(3, totalPages) },
+    (_, i) => windowStart + i
+  );
 
   const handleAddMember = async (newMemberData) => {
     try {
       const created = await createMember(newMemberData);
-      setMembers((prev) => [created, ...prev]);
       setToast(`Member "${created.name}" has been added successfully!`);
-      setTimeout(() => {
-        setToast(null);
-      }, 4500);
+      setTimeout(() => setToast(null), 4500);
+      // Reload current page and counts
+      loadMembers(page, pageSize, activeTab, debouncedSearch);
     } catch (err) {
       console.error('Error creating member:', err);
       setToast(err.message || 'Failed to add member');
-      setTimeout(() => {
-        setToast(null);
-      }, 4500);
+      setTimeout(() => setToast(null), 4500);
       throw err;
     }
   };
@@ -124,35 +177,43 @@ export default function MembersPage() {
   const handleApprove = async (member) => {
     try {
       await updateMemberStatus(member.id, 'approved');
-      updateStatus(member.id, 'Approved');
       setToast(`Member "${member.name}" has been approved!`);
-      setTimeout(() => {
-        setToast(null);
-      }, 4500);
+      setTimeout(() => setToast(null), 4500);
+      loadMembers(page, pageSize, activeTab, debouncedSearch);
     } catch (err) {
       console.error('Error approving member:', err);
       setToast(err.message || 'Failed to approve member');
-      setTimeout(() => {
-        setToast(null);
-      }, 4500);
+      setTimeout(() => setToast(null), 4500);
     }
   };
 
   const handleConfirmReject = async (member, reason) => {
     try {
       await updateMemberStatus(member.id, 'rejected', reason);
-      updateStatus(member.id, 'Rejected', reason);
       setToast(`Member "${member.name}" has been rejected.`);
-      setTimeout(() => {
-        setToast(null);
-      }, 4500);
+      setTimeout(() => setToast(null), 4500);
+      loadMembers(page, pageSize, activeTab, debouncedSearch);
     } catch (err) {
       console.error('Error rejecting member:', err);
       setToast(err.message || 'Failed to reject member');
-      setTimeout(() => {
-        setToast(null);
-      }, 4500);
+      setTimeout(() => setToast(null), 4500);
     }
+  };
+
+  const handleMemberUpdated = (updatedMember) => {
+    // Optimistically update the member in current table view
+    setMembers((prev) =>
+      prev.map((m) => (m.id === updatedMember.id ? { ...m, ...updatedMember } : m))
+    );
+    // If details modal was open for this member, sync it
+    if (selected && selected.id === updatedMember.id) {
+      setSelected((prev) => ({ ...prev, ...updatedMember }));
+    }
+    setToast(`Member "${updatedMember.name}" updated successfully.`);
+    setTimeout(() => setToast(null), 4500);
+
+    // Refresh from server to keep counts and pagination accurate
+    loadMembers(page, pageSize, activeTab, debouncedSearch);
   };
 
   if (isLoading) {
@@ -169,7 +230,6 @@ export default function MembersPage() {
       <div className="flex flex-col gap-4 px-6 pb-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-bold text-ink">Members</h2>
         <div className="flex flex-wrap gap-3">
-          {/* UI only in this demo: no import/add backend yet */}
           <Button variant="outline" className="rounded-full px-6">
             <Upload className="h-4 w-4" aria-hidden="true" /> Import
           </Button>
@@ -230,15 +290,20 @@ export default function MembersPage() {
       </div>
 
       {/* Member list */}
-      {pageItems.length === 0 ? (
+      {isFetching ? (
+        <div className="flex justify-center py-16">
+          <Loader label="Updating members..." />
+        </div>
+      ) : members.length === 0 ? (
         <EmptyState title="No members found" description="Try a different tab or search term." />
       ) : (
         <ul className="divide-y divide-slate-100">
-          {pageItems.map((member) => (
+          {members.map((member) => (
             <MemberRow
               key={member.id}
               member={member}
               onView={setSelected}
+              onEdit={(m) => setEditingMember(m)}
               onApprove={handleApprove}
               onReject={(m) => setRejectingMember(m)}
             />
@@ -249,18 +314,18 @@ export default function MembersPage() {
       {/* Footer: entry count, pagination, page size */}
       <div className="flex flex-col gap-4 border-t border-slate-100 px-6 py-5 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
         <p>
-          Showing {filtered.length === 0 ? 0 : startIndex + 1} to {startIndex + pageItems.length} of{' '}
-          {filtered.length} entries
+          Showing {totalItems === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + members.length, totalItems)} of{' '}
+          {totalItems} entries
         </p>
 
         <div className="flex items-center gap-3">
           <nav aria-label="Pagination" className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setPage(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1 || isFetching}
               aria-label="Previous page"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -269,6 +334,7 @@ export default function MembersPage() {
                 key={num}
                 type="button"
                 onClick={() => setPage(num)}
+                disabled={isFetching}
                 aria-current={num === currentPage ? 'page' : undefined}
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition',
@@ -282,10 +348,10 @@ export default function MembersPage() {
             ))}
             <button
               type="button"
-              onClick={() => setPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages || isFetching}
               aria-label="Next page"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -305,14 +371,23 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* View Member details dialog matching reference UI */}
+      {/* View Member details dialog */}
       <ViewMemberModal
         open={Boolean(selected)}
         member={selected}
         onClose={() => setSelected(null)}
+        onEdit={(m) => setEditingMember(m)}
       />
 
-      {/* Reject Member dialog matching reference UI */}
+      {/* Edit Member dialog */}
+      <EditMemberModal
+        open={Boolean(editingMember)}
+        member={editingMember}
+        onClose={() => setEditingMember(null)}
+        onMemberUpdated={handleMemberUpdated}
+      />
+
+      {/* Reject Member dialog */}
       <RejectMemberModal
         open={Boolean(rejectingMember)}
         member={rejectingMember}
@@ -320,7 +395,7 @@ export default function MembersPage() {
         onConfirmReject={handleConfirmReject}
       />
 
-      {/* Add Member dialog matching reference UI */}
+      {/* Add Member dialog */}
       <AddMemberModal
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}

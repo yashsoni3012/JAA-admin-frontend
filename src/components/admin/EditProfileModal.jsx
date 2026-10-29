@@ -1,18 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Mail, User, Phone, MapPin, Calendar, Building, AlertCircle, Save } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Mail,
+  User,
+  Phone,
+  MapPin,
+  Calendar,
+  Building,
+  AlertCircle,
+  Save,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+} from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import Button from '@/components/common/Button';
+import Avatar from '@/components/common/Avatar';
 import DatePicker from '@/components/common/DatePicker';
-import { updateAdminProfile } from '@/services/admin.service';
+import { updateAdminProfile, getAvatarUrl } from '@/services/admin.service';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/hooks/useAuth';
-
 
 export default function EditProfileModal({ open, profile, onClose, onProfileUpdated }) {
   const { showToast } = useToast();
   const { updateUser } = useAuth();
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -23,7 +36,12 @@ export default function EditProfileModal({ open, profile, onClose, onProfileUpda
     city: '',
     pincode: '',
     address: '',
+    image: '',
   });
+
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -31,6 +49,7 @@ export default function EditProfileModal({ open, profile, onClose, onProfileUpda
   // Sync profile when opened
   useEffect(() => {
     if (profile) {
+      const currentImg = profile.image || profile.profilePhoto || profile.avatar || '';
       setFormData({
         fullName: profile.fullName || profile.name || '',
         email: profile.email || '',
@@ -40,13 +59,52 @@ export default function EditProfileModal({ open, profile, onClose, onProfileUpda
         city: profile.city || '',
         pincode: profile.pincode || '',
         address: profile.address || '',
+        image: currentImg,
       });
+      setImagePreview(getAvatarUrl(currentImg) || '');
+      setImageFile(null);
+      setImageRemoved(false);
       setFormError('');
     }
   }, [profile, open]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Please select a PNG, JPG, or WEBP image', 'error');
+      return;
+    }
+
+    const maxBytes = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxBytes) {
+      showToast('Image file size must be under 5MB', 'error');
+      return;
+    }
+
+    setImageFile(file);
+    setImageRemoved(false);
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setImagePreview(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+    showToast('Image selected! Click "Save Changes" to apply.', 'info');
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setImageRemoved(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    showToast('Image removed', 'info');
   };
 
   const handleSubmit = async (e) => {
@@ -60,26 +118,60 @@ export default function EditProfileModal({ open, profile, onClose, onProfileUpda
 
     setSaving(true);
     try {
-      const payload = {
-        fullName: formData.fullName.trim(),
-        name: formData.fullName.trim(),
-        mobile: formData.mobile.trim(),
-        phone: formData.mobile.trim(),
-        gender: formData.gender,
-        dateOfBirth: formData.dateOfBirth.trim(),
-        dob: formData.dateOfBirth.trim(),
-        city: formData.city.trim(),
-        pincode: formData.pincode.trim(),
-        address: formData.address.trim(),
-      };
+      let updated;
+      if (imageFile) {
+        // Send as FormData to handle the uploaded file
+        const fd = new FormData();
+        fd.append('fullName', formData.fullName.trim());
+        fd.append('name', formData.fullName.trim());
+        fd.append('mobile', formData.mobile.trim());
+        fd.append('phone', formData.mobile.trim());
+        fd.append('gender', formData.gender);
+        fd.append('dateOfBirth', formData.dateOfBirth.trim());
+        fd.append('dob', formData.dateOfBirth.trim());
+        fd.append('city', formData.city.trim());
+        fd.append('pincode', formData.pincode.trim());
+        fd.append('address', formData.address.trim());
+        fd.append('image', imageFile);
+        fd.append('profilePhoto', imageFile);
+        fd.append('avatar', imageFile);
 
-      const updated = await updateAdminProfile(payload);
+        updated = await updateAdminProfile(fd);
+      } else {
+        const payload = {
+          fullName: formData.fullName.trim(),
+          name: formData.fullName.trim(),
+          mobile: formData.mobile.trim(),
+          phone: formData.mobile.trim(),
+          gender: formData.gender,
+          dateOfBirth: formData.dateOfBirth.trim(),
+          dob: formData.dateOfBirth.trim(),
+          city: formData.city.trim(),
+          pincode: formData.pincode.trim(),
+          address: formData.address.trim(),
+        };
+
+        if (imageRemoved) {
+          payload.image = null;
+          payload.profilePhoto = null;
+          payload.avatar = null;
+        }
+
+        updated = await updateAdminProfile(payload);
+      }
 
       // Sync user state in header & session
+      const finalImg =
+        updated?.image ||
+        updated?.profilePhoto ||
+        updated?.avatar ||
+        (imageRemoved ? null : imagePreview);
+
       if (updateUser) {
         updateUser({
-          name: updated.fullName || updated.name,
-          avatar: updated.avatar || updated.profilePhoto,
+          name: updated?.fullName || updated?.name || formData.fullName,
+          image: finalImg,
+          avatar: finalImg,
         });
       }
 
@@ -119,6 +211,79 @@ export default function EditProfileModal({ open, profile, onClose, onProfileUpda
           </div>
         )}
 
+        {/* Profile Image Editable Field */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Profile Image
+          </label>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative shrink-0">
+              <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-white shadow-md bg-white">
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Profile Preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Avatar
+                    name={formData.fullName || 'Admin'}
+                    src={null}
+                    size="lg"
+                    className="h-full w-full text-xl"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 text-center sm:text-left space-y-1.5 min-w-0">
+              <p className="text-xs font-bold text-ink truncate">
+                {imageFile
+                  ? imageFile.name
+                  : imagePreview
+                  ? 'Current Profile Image'
+                  : 'No image uploaded'}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Allowed formats: PNG, JPG, or WEBP. Max size: 5MB.
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-xl text-xs py-1.5 px-3 flex items-center gap-1.5 border-slate-300 bg-white hover:bg-slate-50"
+                >
+                  <Upload className="h-3.5 w-3.5 text-brand-600" />
+                  <span>{imagePreview ? 'Change Image' : 'Upload Image'}</span>
+                </Button>
+
+                {imagePreview && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveImage}
+                    className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 px-2.5 py-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    <span>Remove</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 2-Column Responsive Grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Full Name */}
@@ -146,9 +311,6 @@ export default function EditProfileModal({ open, profile, onClose, onProfileUpda
               <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-600">
                 Email Address
               </label>
-              {/* <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
-                Read-only
-              </span> */}
             </div>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

@@ -1,11 +1,12 @@
 'use client';
 
-import { Phone, Mail, Building2 } from 'lucide-react';
+import { Phone, Mail, Building2, Edit3, X } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import Avatar from '@/components/common/Avatar';
+import Button from '@/components/common/Button';
 import { cn } from '@/lib/utils';
 
-export default function ViewMemberModal({ open, member, onClose }) {
+export default function ViewMemberModal({ open, member, onClose, onEdit }) {
   if (!member) return null;
 
   const rawStatus = (member.status || '').toLowerCase();
@@ -190,6 +191,32 @@ export default function ViewMemberModal({ open, member, onClose }) {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Bottom Actions */}
+        <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="rounded-full px-6 py-2.5 text-sm font-semibold"
+          >
+            Close
+          </Button>
+          {onEdit && (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                onClose();
+                onEdit(member);
+              }}
+              className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-md shadow-brand-500/20"
+            >
+              <Edit3 className="h-4 w-4" />
+              <span>Edit Member</span>
+            </Button>
+          )}
         </div>
       </div>
     </Modal>

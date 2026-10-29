@@ -18,6 +18,8 @@ import {
   RefreshCw,
   KeyRound,
   Lock,
+  Camera,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/common/Avatar';
@@ -25,8 +27,7 @@ import Button from '@/components/common/Button';
 import Loader from '@/components/common/Loader';
 import EditProfileModal from '@/components/admin/EditProfileModal';
 import ChangePasswordModal from '@/components/admin/ChangePasswordModal';
-import { fetchAdminProfile } from '@/services/admin.service';
-
+import { fetchAdminProfile, getAvatarUrl } from '@/services/admin.service';
 
 // Formats birthday to DD-MM-YYYY format
 function formatDob(val) {
@@ -58,7 +59,6 @@ function formatDob(val) {
 }
 
 export default function ProfilePage() {
-
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -127,7 +127,8 @@ export default function ProfilePage() {
   const address = profile?.address;
   const city = profile?.city;
   const pincode = profile?.pincode;
-  const avatar = profile?.avatar || profile?.profilePhoto || user?.avatar;
+  const rawImage = profile?.image || profile?.profilePhoto || profile?.avatar || user?.image || user?.avatar;
+  const image = getAvatarUrl(rawImage);
   const id = profile?.id;
   const mongoId = profile?._id;
   const createdAt = profile?.createdAt || 'N/A';
@@ -170,17 +171,21 @@ export default function ProfilePage() {
         {/* Left Column: Profile Hero Card */}
         <div className="space-y-6">
           <section className="flex flex-col items-center rounded-3xl border border-white bg-white p-8 text-center shadow-card">
-            <div className="relative">
+            <div className="relative group">
               <Avatar
                 name={name}
-                src={avatar}
+                src={image}
                 size="xl"
-                className="h-24 w-24 text-3xl font-bold shadow-md border-4 border-slate-50"
+                className="h-28 w-28 text-3xl font-bold shadow-md border-4 border-slate-50 object-cover"
               />
-              <span
-                className="absolute bottom-1 right-1 h-5 w-5 rounded-full border-2 border-white bg-emerald-500 shadow-xs"
-                title="Active Account"
-              />
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                title="Change profile image"
+                className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white shadow-md hover:bg-brand-700 transition cursor-pointer"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
             </div>
 
             <h2 className="mt-5 text-xl font-bold text-ink tracking-tight">{name}</h2>
@@ -198,10 +203,6 @@ export default function ProfilePage() {
             </div>
 
             <div className="w-full mt-6 pt-6 border-t border-slate-100 space-y-3 text-left">
-              {/* <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-medium">Admin ID</span>
-                <span className="font-mono font-bold text-slate-700">#{id || '12'}</span>
-              </div> */}
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-400 font-medium">Joined On</span>
                 <span className="font-medium text-slate-700">{createdAt}</span>
@@ -296,6 +297,42 @@ export default function ProfilePage() {
                 </dd>
               </div>
 
+              {/* Profile Image Field */}
+              <div>
+                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Profile Image</dt>
+                <dd className="mt-1.5 flex items-center gap-2.5 text-sm font-semibold text-ink">
+                  <ImageIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                  {image ? (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={image}
+                        alt="Profile"
+                        className="h-6 w-6 rounded-full object-cover border border-slate-200"
+                      />
+                      <span className="text-brand-600 font-medium">Uploaded</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditOpen(true)}
+                        className="text-xs text-slate-400 hover:text-brand-600 underline font-normal ml-1"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400 font-normal italic">No image uploaded</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditOpen(true)}
+                        className="text-xs text-brand-600 hover:underline font-medium"
+                      >
+                        + Upload
+                      </button>
+                    </div>
+                  )}
+                </dd>
+              </div>
+
               {/* Role */}
               <div>
                 <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">System Role</dt>
@@ -345,8 +382,6 @@ export default function ProfilePage() {
               </div>
             </dl>
           </section>
-
-
         </div>
       </div>
 

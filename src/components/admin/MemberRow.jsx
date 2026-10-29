@@ -1,10 +1,10 @@
 import Avatar from '@/components/common/Avatar';
 import Badge from '@/components/common/Badge';
-import { Phone, Mail, Building2, Eye, Check, X } from 'lucide-react';
+import { Phone, Mail, Building2, Eye, Pencil, Check, X } from 'lucide-react';
 
 // One member card row, laid out like the Members Approval reference.
-// Pending members get View / Approve / Reject icon actions; others get View Details icon.
-export default function MemberRow({ member, onView, onApprove, onReject }) {
+// Shows View Details, Edit Member, and (if pending) Approve / Reject buttons.
+export default function MemberRow({ member, onView, onEdit, onApprove, onReject }) {
   const isPending = member.status === 'Pending';
 
   return (
@@ -53,6 +53,19 @@ export default function MemberRow({ member, onView, onApprove, onReject }) {
         >
           <Eye className="h-4 w-4" />
         </button>
+
+        {/* Edit Member Icon Button */}
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(member)}
+            title="Edit Member"
+            aria-label="Edit Member"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-all hover:border-brand-500 hover:text-brand-600 hover:bg-slate-50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-100"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
 
         {isPending && (
           <>

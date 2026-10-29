@@ -61,23 +61,34 @@ export function normalizeMember(member) {
       ? 'Rejected'
       : 'Pending';
 
+  const numericId = typeof member.id === 'number' ? member.id : Number(member.id) || member.id;
+
   return {
     ...member,
-    id: member.id,
-    membershipId: member.membershipId || `JAA-MEM-${member.id}`,
-    name: member.name || '',
-    business: member.business || '',
-    mobile: member.mobile || '',
+    id: numericId,
+    membershipId: member.membershipId || `JBAD${150 + (Number(numericId) || 0)}`,
+    name: member.name || member.fullName || '',
+    fullName: member.name || member.fullName || '',
+    business: member.business || member.businessName || '',
+    businessName: member.business || member.businessName || '',
+    mobile: member.mobile || member.phone || '',
+    phone: member.mobile || member.phone || '',
     email: member.email || '',
     city: member.city || 'Ahmedabad',
-    country: member.city || member.country || 'India',
+    country: member.country || member.city || 'India',
     address: member.address || '',
     businessType: member.businessType || 'Retailer',
-    dob: member.dob || '',
+    dob: member.dob || member.dateOfBirth || '',
+    dateOfBirth: member.dateOfBirth || member.dob || '',
     joinedOn: member.joinedOn || member.createdAt || '',
-    avatar: getAvatarUrl(member.avatar),
+    avatar: getAvatarUrl(member.avatar || member.image || member.profilePhoto),
+    image: getAvatarUrl(member.image || member.avatar || member.profilePhoto),
+    profilePhoto: getAvatarUrl(member.profilePhoto || member.image || member.avatar),
     status,
+    rawStatus,
     rejectionReason: member.rejectionReason || member.reason || '',
+    createdAt: member.createdAt || '',
+    updatedAt: member.updatedAt || '',
   };
 }
 
@@ -85,20 +96,20 @@ export function normalizeMember(member) {
  * Fetch all members from the backend API with query filtering and fallback
  */
 export async function getMembers(params = {}) {
+  const page = params.page || 1;
+  const limit = params.limit || 20;
+
   try {
     const url = new URL(BASE_API_URL);
+
+    url.searchParams.set('page', page.toString());
+    url.searchParams.set('limit', limit.toString());
 
     if (params.status && params.status !== 'All') {
       url.searchParams.set('status', params.status.toLowerCase());
     }
-    if (params.search) {
-      url.searchParams.set('search', params.search);
-    }
-    if (params.page) {
-      url.searchParams.set('page', params.page.toString());
-    }
-    if (params.limit) {
-      url.searchParams.set('limit', params.limit.toString());
+    if (params.search && params.search.trim()) {
+      url.searchParams.set('search', params.search.trim());
     }
 
     const token = getAuthToken();
@@ -112,8 +123,33 @@ export async function getMembers(params = {}) {
 
     if (res.ok) {
       const data = await res.json();
-      const list = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
-      return list.map(normalizeMember);
+      const rawList = Array.isArray(data.data?.members)
+        ? data.data.members
+        : Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data.members)
+        ? data.members
+        : Array.isArray(data)
+        ? data
+        : [];
+
+      const members = rawList.map(normalizeMember);
+      const pagination = data.pagination || data.data?.pagination || {
+        total: members.length,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(members.length / limit)),
+        hasNext: false,
+        hasPrev: page > 1,
+      };
+      const counts = data.counts || data.data?.counts || null;
+
+      members.members = members;
+      members.pagination = pagination;
+      members.counts = counts;
+      members.total = pagination.total ?? members.length;
+
+      return members;
     }
 
     console.warn(`[admin.service] API responded with ${res.status}. Falling back to cached members.`);
@@ -122,7 +158,24 @@ export async function getMembers(params = {}) {
   }
 
   // Graceful fallback dummy members if API is temporarily unavailable
-  return FALLBACK_MEMBERS.map(normalizeMember);
+  const fallback = FALLBACK_MEMBERS.map(normalizeMember);
+  fallback.members = fallback;
+  fallback.pagination = {
+    total: fallback.length,
+    page: 1,
+    limit: 20,
+    totalPages: Math.max(1, Math.ceil(fallback.length / 20)),
+    hasNext: false,
+    hasPrev: false,
+  };
+  fallback.counts = {
+    all: fallback.length,
+    pending: fallback.filter((m) => m.status === 'Pending').length,
+    approved: fallback.filter((m) => m.status === 'Approved').length,
+    rejected: fallback.filter((m) => m.status === 'Rejected').length,
+  };
+  fallback.total = fallback.length;
+  return fallback;
 }
 
 /**
@@ -224,6 +277,115 @@ export async function updateMemberStatus(id, status, reason = '') {
 }
 
 /**
+ * Update member details via PATCH http://localhost:5000/api/admin/members/:id
+ * Supports both FormData (with avatar/image file) and JSON
+ */
+export async function updateMember(id, memberData) {
+  const token = getAuthToken();
+  const url = `${BASE_API_URL}/${id}`;
+
+  const isFormData = typeof FormData !== 'undefined' && memberData instanceof FormData;
+
+  if (isFormData) {
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: memberData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'Failed to update member');
+    }
+
+    const json = await res.json();
+    return normalizeMember(json.data || json);
+  }
+
+  // If a profile image file was selected in an object
+  if (
+    memberData.profileImage instanceof File ||
+    memberData.avatar instanceof File ||
+    memberData.image instanceof File
+  ) {
+    const formData = new FormData();
+    const file =
+      memberData.profileImage instanceof File
+        ? memberData.profileImage
+        : memberData.avatar instanceof File
+        ? memberData.avatar
+        : memberData.image;
+
+    formData.append('avatar', file);
+
+    Object.entries(memberData).forEach(([key, val]) => {
+      if (!['profileImage', 'avatar', 'image'].includes(key) && val !== undefined && val !== null) {
+        if (key === 'status') {
+          formData.append(key, val.toString().toLowerCase());
+        } else {
+          formData.append(key, val.toString());
+        }
+      }
+    });
+
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'Failed to update member');
+    }
+
+    const json = await res.json();
+    return normalizeMember(json.data || json);
+  }
+
+  // JSON payload
+  const payload = { ...memberData };
+  delete payload._id;
+
+  if (payload.status) {
+    payload.status = payload.status.toString().toLowerCase();
+  }
+  if (payload.reason !== undefined && payload.rejectionReason === undefined) {
+    payload.rejectionReason = payload.reason;
+  }
+  if (payload.fullName && !payload.name) {
+    payload.name = payload.fullName;
+  }
+  if (payload.businessName && !payload.business) {
+    payload.business = payload.businessName;
+  }
+  if (payload.phone && !payload.mobile) {
+    payload.mobile = payload.phone;
+  }
+
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to update member');
+  }
+
+  const json = await res.json();
+  return normalizeMember(json.data || json);
+}
+
+/**
  * Delete a member via DELETE http://localhost:5000/api/admin/members/:id
  */
 export async function deleteMember(id) {
@@ -251,13 +413,14 @@ export async function deleteMember(id) {
  */
 export async function getDashboardStats() {
   try {
-    const members = await getMembers({ limit: 1000 });
-    const count = (s) => members.filter((m) => m.status === s).length;
+    const res = await getMembers({ page: 1, limit: 5 });
+    const members = Array.isArray(res) ? res : res.members || [];
+    const counts = res.counts;
     return {
-      total: members.length,
-      approved: count('Approved'),
-      pending: count('Pending'),
-      rejected: count('Rejected'),
+      total: counts?.all ?? members.length,
+      approved: counts?.approved ?? members.filter((m) => m.status === 'Approved').length,
+      pending: counts?.pending ?? members.filter((m) => m.status === 'Pending').length,
+      rejected: counts?.rejected ?? members.filter((m) => m.status === 'Rejected').length,
       monthly: [42, 58, 49, 71, 66, 84, 77, 92],
       recent: members.slice(0, 5),
     };
@@ -354,13 +517,18 @@ export async function fetchAdminProfile() {
  */
 export async function updateAdminProfile(payload) {
   const token = getAuthToken();
+  const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
   const res = await fetch(PROFILE_API_URL, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
+    headers: isFormData
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+    body: isFormData ? payload : JSON.stringify(payload),
   });
 
   const data = await res.json().catch(() => ({}));
@@ -380,8 +548,10 @@ export async function updateAdminProfile(payload) {
       if (rawSession) {
         const session = JSON.parse(rawSession);
         if (session?.user) {
+          const userImg = data.data?.image || data.data?.profilePhoto || data.data?.avatar || session.user.image || session.user.avatar;
           session.user.name = data.data?.fullName || data.data?.name || session.user.name;
-          session.user.avatar = data.data?.avatar || data.data?.profilePhoto || session.user.avatar;
+          session.user.image = userImg;
+          session.user.avatar = userImg;
           window.localStorage.setItem('jaa_admin_session', JSON.stringify(session));
         }
       }
@@ -390,4 +560,6 @@ export async function updateAdminProfile(payload) {
 
   return data.data;
 }
+
+
 

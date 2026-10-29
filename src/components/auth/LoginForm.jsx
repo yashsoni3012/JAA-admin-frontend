@@ -33,6 +33,14 @@ export default function LoginForm() {
     }
   }, [isLoading, isAuthenticated, submitting, router]);
 
+  // Ensure fields are completely cleared upon first load
+  useEffect(() => {
+    setEmail('');
+    setPassword('');
+    setErrors({});
+    setFormError('');
+  }, []);
+
   async function handleSubmit(event) {
     event.preventDefault();
     setFormError('');
@@ -107,7 +115,22 @@ export default function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-5">
+      <form onSubmit={handleSubmit} noValidate autoComplete="off" className="mt-6 space-y-5">
+        {/* Hidden decoy fields to catch aggressive browser autofill */}
+        <div
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }}
+        >
+          <input type="text" name="fake_email_decoy" tabIndex={-1} autoComplete="off" defaultValue="" />
+          <input
+            type="password"
+            name="fake_password_decoy"
+            tabIndex={-1}
+            autoComplete="new-password"
+            defaultValue=""
+          />
+        </div>
+
         {/* Email Address */}
         <div>
           <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-ink">
@@ -120,8 +143,9 @@ export default function LoginForm() {
             />
             <input
               id="email"
+              name="admin_login_email"
               type="email"
-              autoComplete="email"
+              autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               aria-invalid={Boolean(errors.email)}
@@ -149,8 +173,9 @@ export default function LoginForm() {
             />
             <input
               id="password"
+              name="admin_login_password"
               type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               aria-invalid={Boolean(errors.password)}
