@@ -6,7 +6,6 @@ import EmptyState from '@/components/common/EmptyState';
 
 // Placeholder screens for the other sidebar items. Only these names are allowed.
 const SECTIONS = {
-  events: 'Events',
   messages: 'Messages',
   leads: 'Leads',
   complaints: 'Complaints',

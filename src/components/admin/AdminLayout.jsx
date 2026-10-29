@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import MobileSidebar from '@/components/admin/MobileSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import LogoutModal from '@/components/common/LogoutModal';
 import { SIDEBAR_NAV } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,9 @@ function getPageTitle(pathname) {
   }
   if (pathname === ROUTES.PROFILE) return 'Profile';
   if (pathname === ROUTES.SETTINGS) return 'Settings';
+  if (pathname === ROUTES.COMPLAINTS || pathname.startsWith(`${ROUTES.COMPLAINTS}`)) {
+    return 'Complaints';
+  }
   const match = SIDEBAR_NAV.find((item) => pathname.startsWith(item.href));
   return match ? match.label : 'Admin';
 }
@@ -24,6 +28,7 @@ export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   // Restore collapsed state preference on mount
@@ -66,10 +71,15 @@ export default function AdminLayout({ children }) {
         <AdminSidebar
           collapsed={collapsed}
           onToggleCollapse={toggleSidebar}
+          onLogoutClick={() => setIsLogoutOpen(true)}
         />
       </aside>
 
-      <MobileSidebar open={mobileOpen} onClose={closeMobile} />
+      <MobileSidebar
+        open={mobileOpen}
+        onClose={closeMobile}
+        onLogoutClick={() => setIsLogoutOpen(true)}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col bg-[#EEF1FF] transition-all duration-300">
         {/* Topbar */}
@@ -77,13 +87,20 @@ export default function AdminLayout({ children }) {
           title={getPageTitle(pathname)}
           onMenuClick={toggleSidebar}
           sidebarCollapsed={collapsed}
+          onLogoutClick={() => setIsLogoutOpen(true)}
         />
 
-        {/* Main Content Area with generous breathing space around the white content card */}
+        {/* Main Content Area */}
         <main className="flex-1 px-4 pb-8 md:px-8 md:pb-10">
           {children}
         </main>
       </div>
+
+      {/* Logout Confirmation Modal matching the design */}
+      <LogoutModal
+        open={isLogoutOpen}
+        onClose={() => setIsLogoutOpen(false)}
+      />
     </div>
   );
 }

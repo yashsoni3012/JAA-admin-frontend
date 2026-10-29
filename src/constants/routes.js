@@ -9,6 +9,9 @@ export const ROUTES = {
   ADMIN: '/admin',
   DASHBOARD: '/admin/dashboard',
   MEMBERS: '/admin/members',
+  EVENTS: '/admin/events',
+  COMPLAINTS: '/admin/complaints',
+  COMMITTEE: '/admin/committee',
   PROFILE: '/admin/profile',
   SETTINGS: '/admin/settings',
 };

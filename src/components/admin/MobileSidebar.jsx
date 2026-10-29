@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 
 // Slide-in drawer for screens smaller than lg.
-export default function MobileSidebar({ open, onClose }) {
+export default function MobileSidebar({ open, onClose, onLogoutClick }) {
   // Close with the Escape key.
   useEffect(() => {
     if (!open) return;
@@ -26,7 +26,13 @@ export default function MobileSidebar({ open, onClose }) {
         >
           <X className="h-5 w-5" />
         </button>
-        <AdminSidebar onNavigate={onClose} />
+        <AdminSidebar
+          onNavigate={onClose}
+          onLogoutClick={() => {
+            onClose();
+            if (onLogoutClick) onLogoutClick();
+          }}
+        />
       </aside>
     </div>
   );
