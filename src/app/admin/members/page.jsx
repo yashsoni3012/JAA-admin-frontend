@@ -16,6 +16,7 @@ import AddMemberModal from '@/components/admin/AddMemberModal';
 import EditMemberModal from '@/components/admin/EditMemberModal';
 import ViewMemberModal from '@/components/admin/ViewMemberModal';
 import RejectMemberModal from '@/components/admin/RejectMemberModal';
+import MemberIdCardModal from '@/components/members/MemberIdCardModal';
 import Button from '@/components/common/Button';
 import EmptyState from '@/components/common/EmptyState';
 import Loader from '@/components/common/Loader';
@@ -48,6 +49,7 @@ export default function MembersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState(null);
+  const [idCardMember, setIdCardMember] = useState(null);
   const [editingMember, setEditingMember] = useState(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [rejectingMember, setRejectingMember] = useState(null);
@@ -303,6 +305,7 @@ export default function MembersPage() {
               key={member.id}
               member={member}
               onView={setSelected}
+              onIdCard={setIdCardMember}
               onEdit={(m) => setEditingMember(m)}
               onApprove={handleApprove}
               onReject={(m) => setRejectingMember(m)}
@@ -377,6 +380,13 @@ export default function MembersPage() {
         member={selected}
         onClose={() => setSelected(null)}
         onEdit={(m) => setEditingMember(m)}
+      />
+
+      {/* Member ID Card dialog */}
+      <MemberIdCardModal
+        open={Boolean(idCardMember)}
+        member={idCardMember}
+        onClose={() => setIdCardMember(null)}
       />
 
       {/* Edit Member dialog */}

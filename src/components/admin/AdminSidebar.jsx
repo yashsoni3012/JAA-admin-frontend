@@ -51,30 +51,34 @@ export default function AdminSidebar({
         {/* Top Logo */}
         <div
           className={cn(
-            'transition-all duration-300 ease-in-out flex items-center pt-1',
-            collapsed ? 'justify-center px-0' : 'justify-between px-3'
+            'transition-all duration-300 ease-in-out flex items-center',
+            collapsed ? 'justify-center px-0' : 'justify-start px-1'
           )}
         >
           <div
-            className="flex items-center gap-3 overflow-hidden cursor-pointer"
+            className="flex items-center overflow-hidden cursor-pointer"
             onClick={() => {
               if (collapsed && onToggleCollapse) onToggleCollapse();
             }}
-            title={collapsed ? 'Click to expand sidebar' : undefined}
+            title={collapsed ? 'Click to expand sidebar' : 'Jewellers Association Ahmedabad'}
           >
-            <span className="text-4xl font-black italic leading-none text-red-600 shrink-0" aria-hidden="true">
-              Jaa
-            </span>
-            <span
+            <div
               className={cn(
-                'font-serif text-[13px] leading-tight text-brand-700 transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden',
-                collapsed ? 'max-w-0 opacity-0' : 'max-w-[150px] opacity-100'
+                'relative overflow-hidden flex items-center justify-center transition-all duration-300',
+                collapsed ? 'h-10 w-10' : 'h-[52px] md:h-[60px] w-[191px]'
               )}
             >
-              <span className="block font-semibold">Jewellers</span>
-              <span className="block font-semibold">Association</span>
-              <span className="block font-semibold">Ahmedabad</span>
-            </span>
+              <img
+                src="/uploads/jaa-logo-1793261989412.png"
+                alt="Jewellers Association Ahmedabad"
+                className={cn(
+                  'max-w-none transition-all duration-300',
+                  collapsed
+                    ? 'h-10 w-10 object-contain'
+                    : 'w-[191px] h-[161px] object-contain'
+                )}
+              />
+            </div>
           </div>
         </div>
 

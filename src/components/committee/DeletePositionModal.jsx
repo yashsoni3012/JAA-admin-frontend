@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Modal from '@/components/common/Modal';
+import Button from '@/components/common/Button';
 
 export default function DeletePositionModal({
   open,
@@ -120,25 +121,25 @@ export default function DeletePositionModal({
 
         {/* Actions: Cancel and Confirm (with clear white text on gradient red button) */}
         <div className="mt-8 flex items-center justify-center gap-3 w-full">
-          <button
+          <Button
             type="button"
+            variant="outline"
             disabled={isDeleting}
             onClick={onClose}
-            className="flex-1 rounded-full border border-slate-300 bg-white py-2.5 px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition shadow-xs disabled:opacity-50"
+            className="flex-1 rounded-full border border-slate-300 bg-white py-2.5 px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition shadow-xs"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="danger"
             disabled={isDeleting}
+            loading={isDeleting}
             onClick={handleConfirm}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF3B3B] to-[#FF2424] hover:brightness-105 active:scale-95 text-white font-semibold text-sm py-2.5 px-6 shadow-md shadow-red-500/30 transition border-transparent disabled:opacity-60"
+            className="flex-1 rounded-full bg-gradient-to-r from-[#FF3B3B] to-[#FF2424] hover:brightness-105 active:scale-95 text-white font-semibold text-sm py-2.5 px-6 shadow-md shadow-red-500/30 transition border-transparent"
           >
-            {isDeleting && (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            )}
             <span>{confirmLabel}</span>
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

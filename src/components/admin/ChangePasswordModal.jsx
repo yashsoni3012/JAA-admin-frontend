@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Lock, KeyRound, Eye, EyeOff, ShieldCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import Button from '@/components/common/Button';
@@ -30,6 +30,19 @@ export default function ChangePasswordModal({ open, onClose }) {
     setShowConfirm(false);
     setFormError('');
   };
+
+  // Ensure fields are completely blank whenever modal opens and beat browser autofill
+  useEffect(() => {
+    if (open) {
+      resetForm();
+      const t1 = setTimeout(() => setCurrentPassword(''), 50);
+      const t2 = setTimeout(() => setCurrentPassword(''), 150);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [open]);
 
   const handleClose = () => {
     if (!submitting) {
@@ -101,7 +114,34 @@ export default function ChangePasswordModal({ open, onClose }) {
       maxWidth="max-w-md"
       bodyClassName="p-6 md:p-8"
     >
-      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+      <form
+        key={open ? 'pw-modal-open' : 'pw-modal-closed'}
+        onSubmit={handleSubmit}
+        noValidate
+        autoComplete="off"
+        className="space-y-5"
+      >
+        {/* Hidden decoy fields to intercept aggressive browser password autofill */}
+        <div
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }}
+        >
+          <input
+            type="text"
+            name="fake_username_decoy"
+            tabIndex={-1}
+            autoComplete="off"
+            defaultValue=""
+          />
+          <input
+            type="password"
+            name="fake_password_decoy"
+            tabIndex={-1}
+            autoComplete="new-password"
+            defaultValue=""
+          />
+        </div>
+
         <p className="text-xs text-slate-500 -mt-2">
           Ensure your account is using a secure and strong password with at least 6 characters.
         </p>
@@ -128,10 +168,13 @@ export default function ChangePasswordModal({ open, onClose }) {
             <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               id="currentPassword"
-              name="currentPassword"
+              name="current_password_unautofill"
               type={showCurrent ? 'text' : 'password'}
               required
-              autoComplete="current-password"
+              autoComplete="new-password"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
               value={currentPassword}
               onChange={(e) => {
                 setCurrentPassword(e.target.value);

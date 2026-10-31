@@ -1,10 +1,10 @@
 import Avatar from '@/components/common/Avatar';
 import Badge from '@/components/common/Badge';
-import { Phone, Mail, Building2, Eye, Pencil, Check, X } from 'lucide-react';
+import { Phone, Mail, Building2, Eye, Pencil, Check, X, CreditCard } from 'lucide-react';
 
 // One member card row, laid out like the Members Approval reference.
-// Shows View Details, Edit Member, and (if pending) Approve / Reject buttons.
-export default function MemberRow({ member, onView, onEdit, onApprove, onReject }) {
+// Shows View Details, Member ID Card, Edit Member, and (if pending) Approve / Reject buttons.
+export default function MemberRow({ member, onView, onEdit, onApprove, onReject, onIdCard }) {
   const isPending = member.status === 'Pending';
 
   return (
@@ -52,6 +52,17 @@ export default function MemberRow({ member, onView, onEdit, onApprove, onReject 
           className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
         >
           <Eye className="h-4 w-4" />
+        </button>
+
+        {/* Member ID Card Icon Button */}
+        <button
+          type="button"
+          onClick={() => (onIdCard ? onIdCard(member) : onView(member))}
+          title="View ID Card"
+          aria-label="View ID Card"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50/60 text-[#1E2B8F] transition-all hover:bg-indigo-100 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        >
+          <CreditCard className="h-4 w-4" />
         </button>
 
         {/* Edit Member Icon Button */}

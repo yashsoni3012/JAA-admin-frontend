@@ -16,6 +16,7 @@ import {
   Building,
 } from 'lucide-react';
 import Avatar from '@/components/common/Avatar';
+import Button from '@/components/common/Button';
 import Loader from '@/components/common/Loader';
 import EmptyState from '@/components/common/EmptyState';
 import AddPositionModal from '@/components/committee/AddPositionModal';
@@ -221,14 +222,15 @@ export default function CommitteePage() {
           </div>
 
           {/* + Add Position Button matching Image 1 */}
-          <button
+          <Button
             type="button"
+            variant="primary"
             onClick={() => setIsAddPositionOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2832A4] px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#2832A4]/25 hover:bg-[#20298a] transition"
+            className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-md shadow-[#2832A4]/20"
           >
             <Plus className="h-4 w-4" />
             <span>Add Position</span>
-          </button>
+          </Button>
         </div>
 
         {/* Search Bar matching Image 1 */}
@@ -291,14 +293,15 @@ export default function CommitteePage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       {/* + Add Member Button matching Image 1 */}
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
                         onClick={() => setAssigningPosition(pos)}
                         className="inline-flex items-center gap-1.5 rounded-full border border-[#2832A4] bg-white px-3 sm:px-4 py-1.5 text-xs font-semibold text-[#2832A4] hover:bg-blue-50 transition shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         <span>Add Member</span>
-                      </button>
+                      </Button>
 
                       {/* Delete Position Trash Button matching Image 1 */}
                       <button
@@ -442,16 +445,16 @@ export default function CommitteePage() {
         onConfirm={handleDeletePositionConfirm}
       />
 
-      {/* Remove Member Confirmation Modal */}
+      {/* Remove Member Confirmation Modal matching Image 4 */}
       <DeletePositionModal
         open={Boolean(removingMemberData)}
         title="Remove Member"
         description={
           removingMemberData
-            ? `Are you sure you want to remove "${removingMemberData.memberName}" from "${removingMemberData.positionName}"?`
+            ? `Are you sure you want to remove "${removingMemberData.memberName}" from the ${removingMemberData.positionName} position?`
             : ''
         }
-        confirmLabel="Remove"
+        confirmLabel="Delete"
         onClose={() => setRemovingMemberData(null)}
         onConfirm={handleRemoveMemberConfirm}
       />

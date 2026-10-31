@@ -20,6 +20,6 @@ export const SIDEBAR_NAV = [
   { label: 'Leads', href: '/admin/leads', icon: TrendingUp },
   { label: 'Complaints', href: ROUTES.COMPLAINTS, icon: AlertCircle },
   // { label: 'SOS', href: '/admin/sos', icon: Siren },
-  { label: 'Committee', href: '/admin/committee', icon: UsersRound },
-  { label: 'Posts', href: '/admin/posts', icon: Image },
+  { label: 'Committee', href: ROUTES.COMMITTEE, icon: UsersRound },
+  { label: 'Posts', href: ROUTES.POSTS, icon: Image },
 ];

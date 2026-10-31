@@ -81,8 +81,6 @@ export default function LoginForm() {
     }
   }
 
-
-
   // Quick fill helper for testing
   const handleQuickFill = (fillEmail, fillPassword) => {
     setEmail(fillEmail);
@@ -228,27 +226,6 @@ export default function LoginForm() {
           {submitting ? 'Authenticating…' : 'Sign in'}
         </Button>
       </form>
-
-      {/* Verified credentials hint */}
-      {/* <div className="mt-6 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-4 text-xs text-slate-600">
-        <p className="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
-          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-          Default Admin Credentials:
-        </p>
-        <div className="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200">
-          <div>
-            <span className="font-semibold text-ink">admin@gmail.com</span> /{' '}
-            <span className="font-mono text-slate-500">123456</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('admin@gmail.com', '123456')}
-            className="text-[11px] font-bold text-brand-600 hover:underline px-2 py-0.5 rounded bg-brand-50"
-          >
-            Fill
-          </button>
-        </div>
-      </div> */}
     </div>
   );
 }

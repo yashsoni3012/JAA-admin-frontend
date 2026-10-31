@@ -62,11 +62,21 @@ export function normalizeMember(member) {
       : 'Pending';
 
   const numericId = typeof member.id === 'number' ? member.id : Number(member.id) || member.id;
+  const membershipId = member.membershipId || `JBAD${150 + (Number(numericId) || 0)}`;
+
+  const idCardData = member.idCard || {};
+  const idCard = {
+    cardNumber: idCardData.cardNumber || membershipId,
+    status: idCardData.status || (rawStatus === 'approved' ? 'active' : rawStatus),
+    issuedAt: idCardData.issuedAt || member.joinedOn || '28-10-2026',
+    validUntil: idCardData.validUntil || null,
+    qrCode: idCardData.qrCode || `https://yourdomain.com/verify/${membershipId}`,
+  };
 
   return {
     ...member,
     id: numericId,
-    membershipId: member.membershipId || `JBAD${150 + (Number(numericId) || 0)}`,
+    membershipId,
     name: member.name || member.fullName || '',
     fullName: member.name || member.fullName || '',
     business: member.business || member.businessName || '',
@@ -87,9 +97,38 @@ export function normalizeMember(member) {
     status,
     rawStatus,
     rejectionReason: member.rejectionReason || member.reason || '',
+    idCard,
     createdAt: member.createdAt || '',
     updatedAt: member.updatedAt || '',
   };
+}
+
+/**
+ * Fetch a single member by ID from the backend API
+ * Endpoint: GET http://localhost:5000/api/admin/members/:id
+ */
+export async function getMemberById(id) {
+  if (!id) return null;
+  try {
+    const token = getAuthToken();
+    const res = await fetch(`${BASE_API_URL}/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data) {
+        return normalizeMember(data.data);
+      }
+    }
+  } catch (err) {
+    console.error(`[admin.service] Failed to fetch member #${id}:`, err);
+  }
+  return null;
 }
 
 /**
