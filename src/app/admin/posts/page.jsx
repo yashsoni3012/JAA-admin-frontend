@@ -5,7 +5,6 @@ import {
   Search,
   Plus,
   Trash2,
-  Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +20,7 @@ import Avatar from '@/components/common/Avatar';
 import Button from '@/components/common/Button';
 import Loader from '@/components/common/Loader';
 import EmptyState from '@/components/common/EmptyState';
+import DatePicker, { parseDateString } from '@/components/common/DatePicker';
 import CreatePostView from '@/components/posts/CreatePostView';
 import ViewPostView from '@/components/posts/ViewPostView';
 import DeletePostModal from '@/components/posts/DeletePostModal';
@@ -67,8 +67,7 @@ export default function PostsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('ALL');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  const [dateFilter, setDateFilter] = useState('');
-  const [showDateInput, setShowDateInput] = useState(false);
+  const [dateFilter, setDateFilter] = useState(null);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -237,10 +236,45 @@ export default function PostsPage() {
         return false;
       }
 
-      // Date filter if applied
+      // Date range / single date filter if applied
       if (dateFilter) {
-        const created = String(p.createdAt || '');
-        if (!created.includes(dateFilter)) return false;
+        let startObj = null;
+        let endObj = null;
+
+        if (typeof dateFilter === 'object') {
+          if (dateFilter.startDate) startObj = parseDateString(dateFilter.startDate);
+          if (dateFilter.endDate) endObj = parseDateString(dateFilter.endDate);
+        } else if (typeof dateFilter === 'string' && dateFilter.trim()) {
+          const parts = dateFilter.split(/\s+(?:-|to)\s+/);
+          startObj = parseDateString(parts[0]);
+          if (parts[1]) endObj = parseDateString(parts[1]);
+        }
+
+        if (startObj || endObj) {
+          const postDate = parseDateString(p.createdAt || p.date || p.updatedAt);
+          if (postDate) {
+            postDate.setHours(0, 0, 0, 0);
+            const postTime = postDate.getTime();
+
+            if (startObj) {
+              const sDate = new Date(startObj);
+              sDate.setHours(0, 0, 0, 0);
+              if (postTime < sDate.getTime()) return false;
+            }
+            if (endObj) {
+              const eDate = new Date(endObj);
+              eDate.setHours(23, 59, 59, 999);
+              if (postTime > eDate.getTime()) return false;
+            }
+          } else {
+            const created = String(p.createdAt || '');
+            const target =
+              typeof dateFilter === 'string'
+                ? dateFilter
+                : dateFilter.startDate || '';
+            if (target && !created.includes(target)) return false;
+          }
+        }
       }
 
       return true;
@@ -465,52 +499,26 @@ export default function PostsPage() {
               )}
             </div>
 
-            {/* Date Range Selector matching Image 1 */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowDateInput((prev) => !prev)}
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs sm:text-sm font-semibold shadow-xs transition',
+            {/* Date Range Selector using modified DatePicker component */}
+            <div className="w-auto">
+              <DatePicker
+                id="posts-date-range-filter"
+                isRange={true}
+                value={dateFilter}
+                onChange={(val) => {
+                  setDateFilter(val);
+                  setPage(1);
+                }}
+                placeholder="Select Date Range"
+                align="right"
+                className="w-auto"
+                inputClassName={cn(
+                  'rounded-full px-4 py-2 text-xs sm:text-sm font-semibold shadow-xs transition select-none',
                   dateFilter
                     ? 'border-[#2832A4] bg-blue-50/50 text-[#2832A4]'
                     : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                 )}
-              >
-                <Calendar className="h-4 w-4 text-slate-400" />
-                <span>{dateFilter ? `Date: ${dateFilter}` : 'Select Date Range'}</span>
-              </button>
-
-              {showDateInput && (
-                <div className="absolute right-0 mt-2 z-30 w-64 rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl animate-in fade-in duration-150 space-y-3">
-                  <p className="text-xs font-bold text-slate-500">Filter by Date</p>
-                  <input
-                    type="date"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        const parts = e.target.value.split('-');
-                        setDateFilter(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                      } else {
-                        setDateFilter('');
-                      }
-                      setShowDateInput(false);
-                    }}
-                    className="w-full rounded-xl border border-slate-200 p-2 text-xs text-slate-700 focus:outline-none focus:border-[#2832A4]"
-                  />
-                  {dateFilter && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDateFilter('');
-                        setShowDateInput(false);
-                      }}
-                      className="text-xs text-red-500 font-semibold hover:underline block"
-                    >
-                      Clear Date Filter
-                    </button>
-                  )}
-                </div>
-              )}
+              />
             </div>
           </div>
         </div>

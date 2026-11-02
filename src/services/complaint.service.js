@@ -124,6 +124,7 @@ export async function getComplaints({
   search = '',
   status = '',
   priority = '',
+  complaintAgainst = '',
   page = 1,
   limit = 10,
 } = {}) {
@@ -133,6 +134,9 @@ export async function getComplaints({
   if (search) url.searchParams.set('search', search);
   if (status && status !== 'All' && status !== 'ALL') url.searchParams.set('status', status);
   if (priority && priority !== 'All' && priority !== 'ALL') url.searchParams.set('priority', priority);
+  if (complaintAgainst && complaintAgainst !== 'All' && complaintAgainst !== 'ALL') {
+    url.searchParams.set('complaintAgainst', complaintAgainst);
+  }
   if (page) url.searchParams.set('page', page);
   if (limit) url.searchParams.set('limit', limit);
 
@@ -151,16 +155,21 @@ export async function getComplaints({
   }
 
   const json = await res.json();
+  const totalItems = json.pagination?.total_items ?? json.pagination?.total ?? json.data?.length ?? 0;
+  const currentPage = json.pagination?.current_page ?? json.pagination?.page ?? page;
+  const pageLimit = json.pagination?.item_per_page ?? json.pagination?.limit ?? limit;
+  const totalPages = json.pagination?.total_page ?? json.pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / pageLimit));
+
   return {
     complaints: json.data || [],
-    pagination: json.pagination || {
-      total: json.data?.length || 0,
-      page: 1,
-      limit: 10,
-      totalPages: 1,
+    pagination: {
+      total: totalItems,
+      page: currentPage,
+      limit: pageLimit,
+      totalPages: totalPages,
     },
     summary: json.summary || {
-      totalComplaints: json.data?.length || 0,
+      totalComplaints: totalItems,
       againstMember: 0,
       againstOther: 0,
     },

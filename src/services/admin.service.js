@@ -85,7 +85,7 @@ export function normalizeMember(member) {
     phone: member.mobile || member.phone || '',
     email: member.email || '',
     city: member.city || 'Ahmedabad',
-    country: member.country || member.city || 'India',
+    country: member.country || 'India',
     address: member.address || '',
     businessType: member.businessType || 'Retailer',
     dob: member.dob || member.dateOfBirth || '',
@@ -173,20 +173,72 @@ export async function getMembers(params = {}) {
         : [];
 
       const members = rawList.map(normalizeMember);
-      const pagination = data.pagination || data.data?.pagination || {
-        total: members.length,
-        page,
-        limit,
-        totalPages: Math.max(1, Math.ceil(members.length / limit)),
-        hasNext: false,
-        hasPrev: page > 1,
+      const rawPagination = data.pagination || data.data?.pagination || {};
+      const total =
+        rawPagination.total_items !== undefined
+          ? rawPagination.total_items
+          : rawPagination.total !== undefined
+          ? rawPagination.total
+          : rawPagination.totalCount !== undefined
+          ? rawPagination.totalCount
+          : members.length;
+
+      const totalPages =
+        rawPagination.total_page !== undefined
+          ? rawPagination.total_page
+          : rawPagination.totalPages !== undefined
+          ? rawPagination.totalPages
+          : Math.max(1, Math.ceil(total / limit));
+
+      const currentPage =
+        rawPagination.current_page !== undefined
+          ? rawPagination.current_page
+          : rawPagination.page !== undefined
+          ? rawPagination.page
+          : page;
+
+      const itemPerPage =
+        rawPagination.item_per_page !== undefined
+          ? rawPagination.item_per_page
+          : rawPagination.limit !== undefined
+          ? rawPagination.limit
+          : limit;
+
+      const hasNext = Boolean(
+        rawPagination.has_more !== undefined
+          ? rawPagination.has_more
+          : rawPagination.hasNext !== undefined
+          ? rawPagination.hasNext
+          : currentPage < totalPages
+      );
+
+      const hasPrev = Boolean(
+        rawPagination.has_prev !== undefined
+          ? rawPagination.has_prev
+          : rawPagination.hasPrev !== undefined
+          ? rawPagination.hasPrev
+          : currentPage > 1
+      );
+
+      const pagination = {
+        total,
+        total_items: total,
+        totalPages,
+        total_page: totalPages,
+        page: currentPage,
+        current_page: currentPage,
+        limit: itemPerPage,
+        item_per_page: itemPerPage,
+        hasNext,
+        hasPrev,
+        has_more: hasNext,
       };
       const counts = data.counts || data.data?.counts || null;
 
       members.members = members;
       members.pagination = pagination;
       members.counts = counts;
-      members.total = pagination.total ?? members.length;
+      members.total = total;
 
       return members;
     }
@@ -201,11 +253,17 @@ export async function getMembers(params = {}) {
   fallback.members = fallback;
   fallback.pagination = {
     total: fallback.length,
+    total_items: fallback.length,
     page: 1,
+    current_page: 1,
     limit: 20,
+    item_per_page: 20,
     totalPages: Math.max(1, Math.ceil(fallback.length / 20)),
+    total_page: Math.max(1, Math.ceil(fallback.length / 20)),
     hasNext: false,
+    has_more: false,
     hasPrev: false,
+    has_prev: false,
   };
   fallback.counts = {
     all: fallback.length,
@@ -602,3 +660,30 @@ export async function updateAdminProfile(payload) {
 
 
 
+
+
+/**
+ * Bulk import members via POST http://localhost:5000/api/admin/members/bulk
+ * @param {Array<Object>} members
+ */
+export async function bulkImportMembers(members) {
+  const token = getAuthToken();
+  const url = `${BASE_API_URL}/bulk`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ members }),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to import members');
+  }
+
+  const result = await res.json();
+  return result;
+}

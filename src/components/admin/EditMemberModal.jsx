@@ -214,7 +214,7 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
       onClose={onClose}
       maxWidth="max-w-4xl"
     >
-      <form onSubmit={handleSubmit} noValidate className="p-6 md:p-8 space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
         {error && (
           <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
             <AlertCircle className="h-5 w-5 shrink-0" />
@@ -434,13 +434,13 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2.5 sm:gap-3 pt-4 border-t border-slate-100">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             disabled={isSubmitting}
-            className="rounded-full px-6 py-2.5 text-sm font-semibold"
+            className="w-full sm:w-auto rounded-full px-6 py-2.5 text-sm font-semibold justify-center"
           >
             Cancel
           </Button>
@@ -448,7 +448,7 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
             type="submit"
             variant="primary"
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-full px-7 py-2.5 text-sm font-semibold shadow-md shadow-brand-500/20"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full px-7 py-2.5 text-sm font-semibold shadow-md shadow-brand-500/20"
           >
             {isSubmitting ? (
               <>

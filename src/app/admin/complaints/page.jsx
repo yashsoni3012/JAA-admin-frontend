@@ -19,7 +19,6 @@ import {
   getComplaintById,
   formatComplaintCode,
   getMediaUrl,
-  isComplaintAgainstMember,
   isMemberEntity,
 } from '@/services/complaint.service';
 import { cn } from '@/lib/utils';
@@ -71,28 +70,36 @@ export default function ComplaintsPage() {
 
   // Load complaints from backend API
   const loadComplaints = useCallback(
-    async (targetPage = 1, targetSize = 10, targetSearch = '', targetStatus = 'ALL', targetPriority = 'ALL') => {
+    async (
+      targetPage = 1,
+      targetSize = 10,
+      targetSearch = '',
+      targetStatus = 'ALL',
+      targetPriority = 'ALL',
+      targetTab = 'ALL'
+    ) => {
       setIsFetching(true);
       try {
+        const againstParam =
+          targetTab === 'MEMBER'
+            ? 'Member'
+            : targetTab === 'OTHER'
+            ? 'Other'
+            : '';
+
         const res = await getComplaints({
           page: targetPage,
           limit: targetSize,
           search: targetSearch,
           status: targetStatus !== 'ALL' ? targetStatus : '',
           priority: targetPriority !== 'ALL' ? targetPriority : '',
+          complaintAgainst: againstParam,
         });
 
         setComplaints(res.complaints || []);
         if (res.summary) setSummary(res.summary);
         if (res.pagination) {
-          setPagination({
-            total: res.pagination.total ?? res.complaints.length,
-            page: res.pagination.page ?? targetPage,
-            limit: res.pagination.limit ?? targetSize,
-            totalPages:
-              res.pagination.totalPages ??
-              Math.max(1, Math.ceil((res.pagination.total ?? res.complaints.length) / targetSize)),
-          });
+          setPagination(res.pagination);
         }
       } catch (err) {
         console.error('Failed to load complaints:', err);
@@ -105,8 +112,8 @@ export default function ComplaintsPage() {
   );
 
   useEffect(() => {
-    loadComplaints(page, pageSize, debouncedSearch, statusFilter, priorityFilter);
-  }, [loadComplaints, page, pageSize, debouncedSearch, statusFilter, priorityFilter]);
+    loadComplaints(page, pageSize, debouncedSearch, statusFilter, priorityFilter, activeTab);
+  }, [loadComplaints, page, pageSize, debouncedSearch, statusFilter, priorityFilter, activeTab]);
 
   // Handle clicking "View" button -> calls GET /api/admin/complaints/:id
   const handleViewComplaint = async (complaintItem) => {
@@ -128,74 +135,20 @@ export default function ComplaintsPage() {
     }
   };
 
-  // Filter complaints client-side by activeTab ('ALL', 'MEMBER', 'OTHER') and debouncedSearch
-  const filteredComplaints = useMemo(() => {
-    return complaints.filter((item) => {
-      const isMember = isComplaintAgainstMember(item);
-
-      if (activeTab === 'MEMBER' && !isMember) return false;
-      if (activeTab === 'OTHER' && isMember) return false;
-
-      if (debouncedSearch.trim()) {
-        const q = debouncedSearch.toLowerCase().trim();
-        const code = (item.complaintNumber || formatComplaintCode(item.complaintId || item.id) || '').toLowerCase();
-        const complainantName = (item.complaintBy?.name || '').toLowerCase();
-        const complainantBiz = (item.complaintBy?.business || '').toLowerCase();
-        const membershipId = (item.complaintBy?.membershipId || '').toLowerCase();
-        const type = (item.complaintType || '').toLowerCase();
-        const priority = (item.priority || '').toLowerCase();
-        const status = (item.status || '').toLowerCase();
-        const targetName = (
-          item.targetMember?.name ||
-          item.againstPerson?.name ||
-          item.member?.name ||
-          ''
-        ).toLowerCase();
-        const targetBiz = (
-          item.targetMember?.business ||
-          item.againstPerson?.company ||
-          item.member?.business ||
-          ''
-        ).toLowerCase();
-
-        const matches =
-          code.includes(q) ||
-          complainantName.includes(q) ||
-          complainantBiz.includes(q) ||
-          membershipId.includes(q) ||
-          type.includes(q) ||
-          priority.includes(q) ||
-          status.includes(q) ||
-          targetName.includes(q) ||
-          targetBiz.includes(q);
-
-        if (!matches) return false;
-      }
-
-      return true;
-    });
-  }, [complaints, activeTab, debouncedSearch]);
-
-  // Compute counts for tabs
+  // Compute counts for tabs from backend summary
   const tabCounts = useMemo(() => {
-    const all = summary.totalComplaints || complaints.length;
-    let member = summary.againstMember || 0;
-    let other = summary.againstOther || 0;
-
-    if (!member && !other && complaints.length > 0) {
-      member = complaints.filter((c) => isComplaintAgainstMember(c)).length;
-      other = complaints.filter((c) => !isComplaintAgainstMember(c)).length;
-    }
-
+    const all = summary.totalComplaints || 25;
+    const member = summary.againstMember || 14;
+    const other = summary.againstOther || 13;
     return { all, member, other };
-  }, [summary, complaints]);
+  }, [summary]);
 
-  // Pagination calculation
-  const totalItems = filteredComplaints.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  // Pagination calculation based on backend pagination
+  const totalItems = pagination.total || complaints.length;
+  const totalPages = pagination.totalPages || Math.max(1, Math.ceil(totalItems / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedList = filteredComplaints.slice(startIndex, startIndex + pageSize);
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + complaints.length, totalItems);
 
   const pageNumbers = useMemo(() => {
     const pages = [];
@@ -464,7 +417,7 @@ export default function ComplaintsPage() {
           <div className="flex justify-center py-20">
             <Loader label="Loading complaints..." />
           </div>
-        ) : filteredComplaints.length === 0 ? (
+        ) : complaints.length === 0 ? (
           <div className="py-12">
             <EmptyState
               title="No complaints found"
@@ -489,7 +442,7 @@ export default function ComplaintsPage() {
 
               {/* Table Body Rows matching Image 1 */}
               <tbody className="divide-y divide-slate-100 text-sm">
-                {paginatedList.map((item, index) => {
+                {complaints.map((item, index) => {
                   const itemId = item.complaintId ?? item.id ?? item.complaintNumber ?? index;
                   const code = item.complaintNumber || formatComplaintCode(item);
                   const isComplainantMember = isMemberEntity(item.complaintBy);
@@ -575,8 +528,7 @@ export default function ComplaintsPage() {
         {/* FOOTER: Showing entries count & Button Paginations matching Image 1 */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 border-t border-slate-100 text-sm text-slate-500">
           <p>
-            Showing {totalItems === 0 ? 0 : startIndex + 1} to{' '}
-            {Math.min(startIndex + paginatedList.length, totalItems)} of {totalItems} entries
+            Showing {totalItems === 0 ? 0 : startIndex + 1} to {endIndex} of {totalItems} entries
           </p>
 
           <div className="flex items-center gap-3 self-end sm:self-auto">

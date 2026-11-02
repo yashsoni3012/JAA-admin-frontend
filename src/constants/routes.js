@@ -14,5 +14,5 @@ export const ROUTES = {
   COMMITTEE: '/admin/committee',
   POSTS: '/admin/posts',
   PROFILE: '/admin/profile',
-  SETTINGS: '/admin/settings',
+  // SETTINGS: '/admin/settings',
 };

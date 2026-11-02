@@ -31,7 +31,7 @@ export default function AdminHeader({
 
   return (
     <>
-      <header className="flex items-center justify-between gap-4 bg-[#EEF1FF] px-6 py-6 md:px-8 md:py-7">
+      <header className="flex items-center justify-between gap-3 sm:gap-4 bg-[#EEF1FF] px-3.5 sm:px-6 py-3.5 sm:py-6 md:px-8 md:py-7">
         {/* Left side: Menu Icon + Page Title */}
         <div className="flex min-w-0 items-center gap-3.5">
           <button
@@ -100,15 +100,17 @@ export default function AdminHeader({
         Profile
       </Link>
 
+      {/* Settings Module Route - Temporarily Commented Out
       <Link
         role="menuitem"
-        href={ROUTES.SETTINGS}
+        href={ROUTES.SETTINGS || '/admin/settings'}
         onClick={() => setMenuOpen(false)}
         className="flex items-center gap-3 px-5 py-3 text-sm text-slate-700 hover:bg-brand-50 transition"
       >
         <Settings className="h-5 w-5" aria-hidden="true" />
         Settings
       </Link>
+      */}
 
       <div className="my-2 border-t border-slate-100" />
 

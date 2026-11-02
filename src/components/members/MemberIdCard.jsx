@@ -23,9 +23,12 @@ export default function MemberIdCard({
     member.idCard?.cardNumber || member.membershipId || `JBAD${member.id || 168}`;
   const status = (member.idCard?.status || member.status || 'Active').toUpperCase();
   const rawStatus = (member.status || '').toLowerCase();
-  const isApproved = rawStatus === 'approved' || status === 'ACTIVE';
+  const isApproved = rawStatus === 'approved';
   const isPending = rawStatus === 'pending' || status === 'PENDING';
   const isRejected = rawStatus === 'rejected' || status === 'REJECTED';
+
+  // Only approved members have a visible ID card
+  if (!isApproved) return null;
 
   const memberSince = member.joinedOn || member.idCard?.issuedAt || member.createdAt || '28-10-2026';
   const validUntil = member.idCard?.validUntil || null;
@@ -129,8 +132,8 @@ export default function MemberIdCard({
     <div className={cn('space-y-6', className)}>
       {/* Action buttons (Download PDF & Print) */}
       {showActions && (
-        <div className="flex flex-wrap items-center justify-between gap-3 no-print bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 no-print bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200">
+          <div className="flex items-center justify-between sm:justify-start gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
               ID Card Status:
             </span>
@@ -154,15 +157,15 @@ export default function MemberIdCard({
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <Button
               type="button"
               variant="outline"
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 rounded-full border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:border-brand-500 hover:text-brand-600 shadow-xs"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-full border-slate-300 bg-white px-3 sm:px-4 py-2 text-xs font-bold text-slate-700 hover:border-brand-500 hover:text-brand-600 shadow-xs"
             >
               <Printer className="h-4 w-4" />
-              <span>Print ID Card</span>
+              <span>Print</span>
             </Button>
 
             <Button
@@ -170,10 +173,10 @@ export default function MemberIdCard({
               variant="primary"
               onClick={handleDownloadPdf}
               loading={isGeneratingPdf}
-              className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-xs font-bold shadow-md shadow-brand-500/25"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-full px-3.5 sm:px-5 py-2 text-xs font-bold shadow-md shadow-brand-500/25"
             >
               <Download className="h-4 w-4" />
-              <span>{isGeneratingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
+              <span>{isGeneratingPdf ? 'PDF...' : 'Download PDF'}</span>
             </Button>
           </div>
         </div>
@@ -188,37 +191,37 @@ export default function MemberIdCard({
         {/* ========================================================= */}
         {/* CARD 1: FRONT SIDE (Exact replica of attached reference)   */}
         {/* ========================================================= */}
-        <div className="w-full max-w-[480px] overflow-hidden rounded-[26px] border border-slate-200/90 bg-white shadow-xl shadow-slate-200/50 print:border print:shadow-none">
+        <div className="w-full max-w-[480px] overflow-hidden rounded-[22px] sm:rounded-[26px] border border-slate-200/90 bg-white shadow-xl shadow-slate-200/50 print:border print:shadow-none">
           {/* Top Royal Blue Header */}
-          <div className="bg-gradient-to-r from-[#17257D] via-[#2435A5] to-[#3649BE] px-6 py-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-[#17257D] via-[#2435A5] to-[#3649BE] px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between">
             {/* Left: Circle Logo & Title */}
-            <div className="flex items-center gap-3.5">
+            <div className="flex items-center gap-2.5 sm:gap-3.5">
               {/* White Circle with JAA in Red */}
-              <div className="h-11 w-11 shrink-0 rounded-full bg-white flex items-center justify-center shadow-sm">
-                <span className="text-[13px] font-black italic tracking-tighter text-red-600 select-none">
+              <div className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-full bg-white flex items-center justify-center shadow-sm">
+                <span className="text-xs sm:text-[13px] font-black italic tracking-tighter text-red-600 select-none">
                   JAA
                 </span>
               </div>
               <div className="leading-tight">
-                <h3 className="text-base md:text-lg font-bold text-white tracking-tight">
+                <h3 className="text-sm sm:text-base md:text-lg font-bold text-white tracking-tight">
                   Jewellers Association
                 </h3>
-                <p className="text-[10px] md:text-[11px] font-bold tracking-[0.22em] text-white/85 uppercase mt-0.5">
+                <p className="text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-[0.2em] text-white/85 uppercase mt-0.5">
                   AHMEDABAD
                 </p>
               </div>
             </div>
 
             {/* Right: MEMBER Pill Badge */}
-            <span className="rounded-full bg-white/20 border border-white/30 px-4 py-1 text-xs font-bold uppercase tracking-wider text-white">
+            <span className="rounded-full bg-white/20 border border-white/30 px-3 sm:px-4 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white">
               MEMBER
             </span>
           </div>
 
           {/* Main Card Body */}
-          <div className="p-6 md:p-7 flex items-center gap-6">
+          <div className="p-4 sm:p-6 md:p-7 flex items-center gap-3.5 sm:gap-6">
             {/* Member Profile Photo with Red Border */}
-            <div className="relative h-28 w-24 md:h-32 md:w-28 shrink-0 overflow-hidden rounded-2xl border-2 border-[#D92D20] bg-slate-200 shadow-sm flex items-center justify-center">
+            <div className="relative h-24 w-20 sm:h-28 sm:w-24 md:h-32 md:w-28 shrink-0 overflow-hidden rounded-2xl border-2 border-[#D92D20] bg-slate-200 shadow-sm flex items-center justify-center">
               {member.avatar && !photoError ? (
                 <img
                   src={member.avatar}
@@ -227,7 +230,7 @@ export default function MemberIdCard({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full flex-col items-center justify-center bg-slate-300 text-slate-600 font-bold text-sm tracking-wider">
+                <div className="flex h-full w-full flex-col items-center justify-center bg-slate-300 text-slate-600 font-bold text-xs sm:text-sm tracking-wider">
                   <span>PHOTO</span>
                 </div>
               )}
@@ -235,18 +238,18 @@ export default function MemberIdCard({
 
             {/* Member Name, Business, Membership ID */}
             <div className="min-w-0 flex-1">
-              <h4 className="text-xl md:text-2xl font-bold text-[#1E293B] tracking-tight leading-snug truncate">
+              <h4 className="text-lg sm:text-xl md:text-2xl font-bold text-[#1E293B] tracking-tight leading-snug truncate">
                 {member.name || 'Member Name'}
               </h4>
-              <p className="text-sm md:text-base font-normal text-slate-500 mt-0.5 truncate">
+              <p className="text-xs sm:text-sm md:text-base font-normal text-slate-500 mt-0.5 truncate">
                 {member.business || 'Business Member'}
               </p>
 
-              <div className="mt-3">
-                <span className="block text-[10px] md:text-[11px] font-bold tracking-[0.2em] text-slate-400 uppercase">
+              <div className="mt-2 sm:mt-3">
+                <span className="block text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-[0.2em] text-slate-400 uppercase">
                   MEMBERSHIP ID
                 </span>
-                <span className="block text-2xl md:text-[28px] font-black text-[#D92D20] tracking-widest font-mono leading-tight mt-0.5">
+                <span className="block text-xl sm:text-2xl md:text-[28px] font-black text-[#D92D20] tracking-wider sm:tracking-widest font-mono leading-tight mt-0.5">
                   {membershipId}
                 </span>
               </div>
@@ -254,12 +257,12 @@ export default function MemberIdCard({
           </div>
 
           {/* Bottom Footer Section */}
-          <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between bg-white">
+          <div className="border-t border-slate-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-white">
             <div>
-              <span className="block text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase">
+              <span className="block text-[9px] sm:text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase">
                 MEMBER SINCE
               </span>
-              <span className="block text-sm font-bold text-[#1E293B] mt-0.5">
+              <span className="block text-xs sm:text-sm font-bold text-[#1E293B] mt-0.5">
                 {memberSince}
               </span>
             </div>
@@ -268,7 +271,7 @@ export default function MemberIdCard({
             <div>
               <span
                 className={cn(
-                  'inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider',
+                  'inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider',
                   isApproved
                     ? 'bg-[#D1FADF] text-[#027A48] border border-[#A6F4C5]'
                     : isPending

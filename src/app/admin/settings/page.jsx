@@ -1,3 +1,12 @@
+import { redirect } from 'next/navigation';
+import { ROUTES } from '@/constants/routes';
+
+// Settings module route and code has been commented out and disabled as requested.
+export default function SettingsPage() {
+  redirect(ROUTES.DASHBOARD || '/admin/dashboard');
+}
+
+/*
 'use client';
 
 import { useState } from 'react';
@@ -18,7 +27,7 @@ const TOGGLES = [
   { key: 'compactTables', label: 'Compact tables', description: 'Show more rows with less spacing.' },
 ];
 
-export default function SettingsPage() {
+export function OldSettingsPage() {
   const [settings, setSettings] = useState(INITIAL);
   const [notice, setNotice] = useState('');
 
@@ -73,3 +82,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+*/

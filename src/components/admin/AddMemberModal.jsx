@@ -244,8 +244,8 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
 
   return (
     <Modal open={open} title="Add Member" onClose={onClose} maxWidth="max-w-4xl">
-      <form onSubmit={handleSubmit} noValidate className="p-6 md:p-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+      <form onSubmit={handleSubmit} noValidate className="p-4 sm:p-6 md:p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 lg:gap-x-8 gap-y-4 sm:gap-y-5">
           {/* LEFT COLUMN */}
           <div className="space-y-4">
             {/* Profile Image (Optional) */}
@@ -516,18 +516,18 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
         </div>
 
         {/* FOOTER ACTIONS */}
-        <div className="mt-8 flex items-center justify-end gap-3.5">
+        <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2.5 sm:gap-3.5">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-slate-200 bg-white px-7 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-ink transition focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="w-full sm:w-auto text-center justify-center rounded-full border border-slate-200 bg-white px-7 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-ink transition focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-[#3F4BC4] bg-[#F7F9FF] px-6 py-2.5 text-sm font-semibold text-[#3F4BC4] hover:bg-[#EEF2FF] hover:border-[#333DA8] active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-brand-100 shadow-sm"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border-2 border-[#3F4BC4] bg-[#F7F9FF] px-6 py-2.5 text-sm font-semibold text-[#3F4BC4] hover:bg-[#EEF2FF] hover:border-[#333DA8] active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-brand-100 shadow-sm"
           >
             {isSubmitting ? (
               <>

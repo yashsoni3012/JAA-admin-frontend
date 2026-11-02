@@ -52,21 +52,21 @@ export default function RejectMemberModal({ open, member, onClose, onConfirmReje
       maxWidth="max-w-xl"
       headerBorder={false}
     >
-      <form onSubmit={handleSubmit} noValidate className="px-6 pb-6 md:px-8 md:pb-8 pt-1">
+      <form onSubmit={handleSubmit} noValidate className="px-4 pb-4 sm:px-6 sm:pb-6 md:px-8 md:pb-8 pt-1">
         {/* Helper description text matching reference image */}
-        <p className="text-sm text-slate-500 leading-relaxed mb-6">
+        <p className="text-xs sm:text-sm text-slate-500 leading-relaxed mb-4 sm:mb-6">
           Please provide a reason for rejecting this member, This will help the member understand the issue.
         </p>
 
         {/* Rejection reason field */}
         <div>
-          <label htmlFor="rejection-reason" className="block text-sm font-bold text-red-500 mb-2">
+          <label htmlFor="rejection-reason" className="block text-xs sm:text-sm font-bold text-red-500 mb-2">
             Rejection Reason <span className="text-red-500">*</span>
           </label>
           <textarea
             ref={textareaRef}
             id="rejection-reason"
-            rows={5}
+            rows={4}
             value={reason}
             onChange={(e) => {
               setReason(e.target.value);
@@ -74,7 +74,7 @@ export default function RejectMemberModal({ open, member, onClose, onConfirmReje
             }}
             placeholder="Enter reason for rejection..."
             className={cn(
-              'w-full rounded-2xl bg-[#FFF5F5] p-4 text-sm text-ink placeholder:text-slate-400 transition resize-none',
+              'w-full rounded-2xl bg-[#FFF5F5] p-3.5 sm:p-4 text-xs sm:text-sm text-ink placeholder:text-slate-400 transition resize-none',
               error
                 ? 'border-2 border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100'
                 : 'border border-red-100 focus:border-red-400 focus:outline-none focus:ring-4 focus:ring-red-50'
@@ -86,18 +86,18 @@ export default function RejectMemberModal({ open, member, onClose, onConfirmReje
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-8 flex items-center justify-end gap-3.5">
+        <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2.5 sm:gap-3.5">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-slate-200 bg-white px-7 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="w-full sm:w-auto rounded-full border border-slate-200 bg-white px-7 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition focus:outline-none focus:ring-2 focus:ring-slate-200 text-center justify-center"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-[#FF5B5B] bg-white px-6 py-2.5 text-sm font-semibold text-[#FF5B5B] hover:bg-red-50 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-red-100"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border-2 border-[#FF5B5B] bg-white px-6 py-2.5 text-sm font-semibold text-[#FF5B5B] hover:bg-red-50 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-red-100"
           >
             {isSubmitting ? (
               <>

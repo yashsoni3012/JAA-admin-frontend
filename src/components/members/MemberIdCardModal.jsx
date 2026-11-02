@@ -35,7 +35,10 @@ export default function MemberIdCardModal({
     }
   }, [open, member]);
 
-  if (!open || !member) return null;
+  const current = activeMember || member;
+  const isApproved = String(current?.status || '').toLowerCase() === 'approved';
+
+  if (!open || !member || !isApproved) return null;
 
   return (
     <Modal
@@ -43,10 +46,10 @@ export default function MemberIdCardModal({
       title="Member ID Card"
       onClose={onClose}
       maxWidth="max-w-2xl"
-      headerClassName="px-6 pt-6 pb-3 md:px-8 md:pt-7"
-      bodyClassName="px-6 py-4 md:px-8 md:py-6"
+      headerClassName="px-4 pt-4 pb-2 sm:px-6 sm:pt-6 md:px-8 md:pt-7"
+      bodyClassName="px-3 sm:px-6 py-3 sm:py-4 md:px-8 md:py-6"
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {loading && !activeMember?.idCard?.qrCode ? (
           <div className="flex justify-center py-12">
             <Loader label="Loading member card..." />
@@ -55,12 +58,12 @@ export default function MemberIdCardModal({
           <MemberIdCard member={activeMember || member} />
         )}
 
-        <div className="flex justify-end pt-4 border-t border-slate-100 no-print">
+        <div className="flex justify-end pt-3 sm:pt-4 border-t border-slate-100 no-print">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
-            className="rounded-full px-6 py-2.5 text-sm font-semibold"
+            className="w-full sm:w-auto rounded-full px-6 py-2.5 text-sm font-semibold justify-center"
           >
             Close
           </Button>

@@ -15,7 +15,9 @@ export default function AuthGuard({ children }) {
   const isPublicAuthRoute =
     pathname?.includes('/admin/forget-password') ||
     pathname?.includes('/admin/reset-password') ||
-    pathname?.includes('/admin/forgot-password');
+    pathname?.includes('/admin/forgot-password') ||
+    pathname?.includes('/admin/login') ||
+    pathname === '/login';
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated && !isPublicAuthRoute) {

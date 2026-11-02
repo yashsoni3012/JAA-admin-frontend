@@ -13,10 +13,10 @@ import { cn } from '@/lib/utils';
 // Works out the header title from the current URL.
 function getPageTitle(pathname) {
   if (pathname === ROUTES.MEMBERS || pathname.startsWith(`${ROUTES.MEMBERS}/`)) {
-    return 'Members Approval';
+    return 'Members';
   }
   if (pathname === ROUTES.PROFILE) return 'Profile';
-  if (pathname === ROUTES.SETTINGS) return 'Settings';
+  // if (pathname === ROUTES.SETTINGS || pathname === '/admin/settings') return 'Settings';
   if (pathname === ROUTES.COMPLAINTS || pathname.startsWith(`${ROUTES.COMPLAINTS}`)) {
     return 'Complaints';
   }
@@ -91,7 +91,7 @@ export default function AdminLayout({ children }) {
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 px-4 pb-8 md:px-8 md:pb-10">
+        <main className="flex-1 px-3.5 sm:px-4 pb-6 sm:pb-8 md:px-8 md:pb-10">
           {children}
         </main>
       </div>

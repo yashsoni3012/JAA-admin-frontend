@@ -10,13 +10,15 @@ import {
   CheckCircle2,
   X,
 } from 'lucide-react';
-import { getMembers, createMember, updateMemberStatus, updateMember } from '@/services/admin.service';
+import { getMembers, createMember, updateMemberStatus, updateMember, deleteMember } from '@/services/admin.service';
 import MemberRow from '@/components/admin/MemberRow';
 import AddMemberModal from '@/components/admin/AddMemberModal';
 import EditMemberModal from '@/components/admin/EditMemberModal';
 import ViewMemberModal from '@/components/admin/ViewMemberModal';
 import RejectMemberModal from '@/components/admin/RejectMemberModal';
 import MemberIdCardModal from '@/components/members/MemberIdCardModal';
+import ImportMembersModal from '@/components/admin/ImportMembersModal';
+import DeleteMemberModal from '@/components/admin/DeleteMemberModal';
 import Button from '@/components/common/Button';
 import EmptyState from '@/components/common/EmptyState';
 import Loader from '@/components/common/Loader';
@@ -29,11 +31,17 @@ export default function MembersPage() {
   const [members, setMembers] = useState([]);
   const [pagination, setPagination] = useState({
     total: 0,
+    total_items: 0,
     page: 1,
+    current_page: 1,
     limit: 20,
+    item_per_page: 20,
     totalPages: 1,
+    total_page: 1,
     hasNext: false,
+    has_more: false,
     hasPrev: false,
+    has_prev: false,
   });
   const [counts, setCounts] = useState({
     all: 0,
@@ -52,7 +60,9 @@ export default function MembersPage() {
   const [idCardMember, setIdCardMember] = useState(null);
   const [editingMember, setEditingMember] = useState(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [rejectingMember, setRejectingMember] = useState(null);
+  const [deletingMember, setDeletingMember] = useState(null);
   const [toast, setToast] = useState(null);
 
   // Debounce search input by 350ms to prevent duplicate API requests
@@ -77,26 +87,66 @@ export default function MembersPage() {
       const list = data.members || (Array.isArray(data) ? data : []);
       setMembers(list);
 
-      if (data.pagination) {
-        setPagination({
-          total: data.pagination.total ?? list.length,
-          page: data.pagination.page ?? targetPage,
-          limit: data.pagination.limit ?? targetSize,
-          totalPages: data.pagination.totalPages ?? Math.max(1, Math.ceil((data.pagination.total ?? list.length) / targetSize)),
-          hasNext: Boolean(data.pagination.hasNext),
-          hasPrev: Boolean(data.pagination.hasPrev),
-        });
-      } else {
-        const total = data.total ?? list.length;
-        setPagination({
-          total,
-          page: targetPage,
-          limit: targetSize,
-          totalPages: Math.max(1, Math.ceil(total / targetSize)),
-          hasNext: targetPage * targetSize < total,
-          hasPrev: targetPage > 1,
-        });
-      }
+      const rawPagination = data.pagination || {};
+      const totalItems =
+        rawPagination.total_items !== undefined
+          ? rawPagination.total_items
+          : rawPagination.total !== undefined
+          ? rawPagination.total
+          : data.total !== undefined
+          ? data.total
+          : list.length;
+
+      const totalPages =
+        rawPagination.total_page !== undefined
+          ? rawPagination.total_page
+          : rawPagination.totalPages !== undefined
+          ? rawPagination.totalPages
+          : Math.max(1, Math.ceil(totalItems / targetSize));
+
+      const currentPage =
+        rawPagination.current_page !== undefined
+          ? rawPagination.current_page
+          : rawPagination.page !== undefined
+          ? rawPagination.page
+          : targetPage;
+
+      const itemPerPage =
+        rawPagination.item_per_page !== undefined
+          ? rawPagination.item_per_page
+          : rawPagination.limit !== undefined
+          ? rawPagination.limit
+          : targetSize;
+
+      const hasNext = Boolean(
+        rawPagination.has_more !== undefined
+          ? rawPagination.has_more
+          : rawPagination.hasNext !== undefined
+          ? rawPagination.hasNext
+          : currentPage < totalPages
+      );
+
+      const hasPrev = Boolean(
+        rawPagination.has_prev !== undefined
+          ? rawPagination.has_prev
+          : rawPagination.hasPrev !== undefined
+          ? rawPagination.hasPrev
+          : currentPage > 1
+      );
+
+      setPagination({
+        total: totalItems,
+        total_items: totalItems,
+        page: currentPage,
+        current_page: currentPage,
+        limit: itemPerPage,
+        item_per_page: itemPerPage,
+        totalPages,
+        total_page: totalPages,
+        hasNext,
+        hasPrev,
+        has_more: hasNext,
+      });
 
       if (data.counts) {
         setCounts(data.counts);
@@ -119,13 +169,13 @@ export default function MembersPage() {
     if (!counts) return 0;
     switch (tab) {
       case 'All':
-        return counts.all ?? 0;
+        return counts.all ?? counts.All ?? 0;
       case 'Pending':
-        return counts.pending ?? 0;
+        return counts.pending ?? counts.Pending ?? 0;
       case 'Approved':
-        return counts.approved ?? 0;
+        return counts.approved ?? counts.Approved ?? 0;
       case 'Rejected':
-        return counts.rejected ?? 0;
+        return counts.rejected ?? counts.Rejected ?? 0;
       default:
         return 0;
     }
@@ -149,16 +199,23 @@ export default function MembersPage() {
   };
 
   // Pagination calculation
-  const totalItems = pagination.total ?? 0;
-  const totalPages = Math.max(1, pagination.totalPages ?? Math.ceil(totalItems / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
+  const totalItems = pagination.total_items ?? pagination.total ?? 0;
+  const totalPages = Math.max(1, pagination.total_page ?? pagination.totalPages ?? Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + members.length, totalItems);
 
-  // Window of up to 3 page numbers (e.g. 1 2 3)
-  const windowStart = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
+  // Dynamic window of up to 5 page numbers (e.g. 1 2 3 4 5)
+  const maxButtons = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+  let endPage = startPage + maxButtons - 1;
+  if (endPage > totalPages) {
+    endPage = totalPages;
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
   const pageNumbers = Array.from(
-    { length: Math.min(3, totalPages) },
-    (_, i) => windowStart + i
+    { length: Math.max(1, endPage - startPage + 1) },
+    (_, i) => startPage + i
   );
 
   const handleAddMember = async (newMemberData) => {
@@ -166,7 +223,6 @@ export default function MembersPage() {
       const created = await createMember(newMemberData);
       setToast(`Member "${created.name}" has been added successfully!`);
       setTimeout(() => setToast(null), 4500);
-      // Reload current page and counts
       loadMembers(page, pageSize, activeTab, debouncedSearch);
     } catch (err) {
       console.error('Error creating member:', err);
@@ -203,19 +259,30 @@ export default function MembersPage() {
   };
 
   const handleMemberUpdated = (updatedMember) => {
-    // Optimistically update the member in current table view
     setMembers((prev) =>
       prev.map((m) => (m.id === updatedMember.id ? { ...m, ...updatedMember } : m))
     );
-    // If details modal was open for this member, sync it
     if (selected && selected.id === updatedMember.id) {
       setSelected((prev) => ({ ...prev, ...updatedMember }));
     }
     setToast(`Member "${updatedMember.name}" updated successfully.`);
     setTimeout(() => setToast(null), 4500);
-
-    // Refresh from server to keep counts and pagination accurate
     loadMembers(page, pageSize, activeTab, debouncedSearch);
+  };
+
+  const handleDeleteMember = async (memberId) => {
+    try {
+      await deleteMember(memberId);
+      setToast('Member deleted successfully.');
+      setTimeout(() => setToast(null), 4500);
+      setDeletingMember(null);
+      loadMembers(page, pageSize, activeTab, debouncedSearch);
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      setToast(err.message || 'Failed to delete member');
+      setTimeout(() => setToast(null), 4500);
+      throw err;
+    }
   };
 
   if (isLoading) {
@@ -227,26 +294,43 @@ export default function MembersPage() {
   }
 
   return (
-    <section className="rounded-3xl border border-white bg-white shadow-card">
-      {/* Header: title + actions */}
-      <div className="flex flex-col gap-4 px-6 pb-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-bold text-ink">Members</h2>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="rounded-full px-6">
-            <Upload className="h-4 w-4" aria-hidden="true" /> Import
+    <section className="rounded-2xl border border-white bg-white shadow-card sm:rounded-3xl overflow-hidden">
+      {/* Header: title + actions (Responsive across mobile, tablet, desktop) */}
+      <div className="flex flex-col gap-3.5 px-4 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pt-6">
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold text-ink">Members</h2>
+          <p className="text-xs text-slate-400 mt-0.5 sm:hidden">
+            {totalItems} total registered members
+          </p>
+        </div>
+
+        {/* Action Buttons: side-by-side grid on mobile, auto-width row on tablet/desktop */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsImportOpen(true)}
+            className="w-full sm:w-auto justify-center rounded-full px-4 sm:px-6 text-xs sm:text-sm py-2 sm:py-2.5 cursor-pointer hover:bg-slate-50 transition"
+          >
+            <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span>Import</span>
           </Button>
           <Button
             variant="primary"
-            className="px-6"
+            className="w-full sm:w-auto justify-center rounded-full px-4 sm:px-6 text-xs sm:text-sm py-2 sm:py-2.5 shadow-md shadow-brand-500/20 cursor-pointer"
             onClick={() => setIsAddOpen(true)}
           >
-            <Plus className="h-4 w-4" aria-hidden="true" /> Add Member
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span>Add Member</span>
           </Button>
         </div>
       </div>
 
-      {/* Status tabs */}
-      <div role="tablist" aria-label="Filter members by status" className="no-scrollbar flex gap-8 overflow-x-auto border-b border-slate-100 px-6">
+      {/* Status tabs (Touch scroll on mobile with hidden scrollbar) */}
+      <div
+        role="tablist"
+        aria-label="Filter members by status"
+        className="no-scrollbar flex gap-4 sm:gap-7 overflow-x-auto border-b border-slate-100 px-4 sm:px-6"
+      >
         {TABS.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -257,78 +341,98 @@ export default function MembersPage() {
               aria-selected={isActive}
               onClick={() => changeTab(tab)}
               className={cn(
-                'relative shrink-0 pb-4 text-sm font-medium transition',
-                isActive ? 'font-semibold text-brand-500' : 'text-slate-500 hover:text-ink'
+                'relative shrink-0 pb-3 sm:pb-3.5 text-xs sm:text-sm font-medium transition cursor-pointer select-none',
+                isActive ? 'font-bold text-brand-500' : 'text-slate-500 hover:text-ink'
               )}
             >
-              {tab}({countFor(tab)})
-              {isActive && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand-500" />}
+              <span>{tab}</span>
+              <span className={cn(
+                'ml-1.5 inline-block text-[11px] sm:text-xs px-1.5 py-0.5 rounded-full font-semibold',
+                isActive ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-500'
+              )}>
+                {countFor(tab)}
+              </span>
+              {isActive && (
+                <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand-500" />
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Search */}
-      <div className="px-6 py-5">
-        <label className="relative block max-w-xl">
+      {/* Search Bar */}
+      <div className="px-4 py-3.5 sm:px-6 sm:py-4">
+        <label className="relative block w-full max-w-xl">
           <span className="sr-only">Search members</span>
-          <Search className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Search
+            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
           <input
             type="search"
             value={search}
             onChange={(e) => changeSearch(e.target.value)}
-            placeholder="Search by name, business, mobile..."
-            className="w-full rounded-full border border-slate-200 bg-white py-3 pl-12 pr-5 text-sm text-ink placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100"
+            placeholder="Search by name, business, mobile, membership ID..."
+            className="w-full rounded-full border border-slate-200 bg-white py-2.5 sm:py-3 pl-11 pr-4 text-xs sm:text-sm text-ink placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100 transition shadow-2xs"
           />
         </label>
       </div>
 
-      {/* Table Column Header with dedicated Status column */}
-      <div className="hidden md:grid grid-cols-12 gap-4 border-t border-b border-slate-100 bg-[#F8FAFC] px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-        <div className="col-span-4">Member</div>
-        <div className="col-span-4">Contact Info</div>
-        <div className="col-span-2">Status</div>
-        <div className="col-span-2 text-right">Actions</div>
+      {/* Table & List Wrapper */}
+      <div className="w-full">
+        {/* Table Column Header: visible on Tablet (md:) and Desktop */}
+        <div className="hidden md:grid grid-cols-12 gap-4 border-t border-b border-slate-100 bg-[#F8FAFC] px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="col-span-4">Member</div>
+          <div className="col-span-3">Contact Info</div>
+          <div className="col-span-2">Status</div>
+          <div className="col-span-3 text-right">Actions</div>
+        </div>
+
+        {/* Member list (Card view on mobile, structured row on tablet & desktop) */}
+        {isFetching ? (
+          <div className="flex justify-center py-16">
+            <Loader label="Updating members..." />
+          </div>
+        ) : members.length === 0 ? (
+          <EmptyState
+            title="No members found"
+            description="Try selecting a different status tab or adjusting your search term."
+          />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {members.map((member) => (
+              <MemberRow
+                key={member.id}
+                member={member}
+                onView={setSelected}
+                onIdCard={setIdCardMember}
+                onEdit={(m) => setEditingMember(m)}
+                onApprove={handleApprove}
+                onReject={(m) => setRejectingMember(m)}
+                onDelete={(m) => setDeletingMember(m)}
+              />
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* Member list */}
-      {isFetching ? (
-        <div className="flex justify-center py-16">
-          <Loader label="Updating members..." />
-        </div>
-      ) : members.length === 0 ? (
-        <EmptyState title="No members found" description="Try a different tab or search term." />
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {members.map((member) => (
-            <MemberRow
-              key={member.id}
-              member={member}
-              onView={setSelected}
-              onIdCard={setIdCardMember}
-              onEdit={(m) => setEditingMember(m)}
-              onApprove={handleApprove}
-              onReject={(m) => setRejectingMember(m)}
-            />
-          ))}
-        </ul>
-      )}
-
-      {/* Footer: entry count, pagination, page size */}
-      <div className="flex flex-col gap-4 border-t border-slate-100 px-6 py-5 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
-        <p>
-          Showing {totalItems === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + members.length, totalItems)} of{' '}
-          {totalItems} entries
+      {/* Footer: entry count, pagination, page size (fully responsive) */}
+      <div className="flex flex-col gap-3.5 border-t border-slate-100 px-4 py-4 sm:px-6 sm:py-5 text-xs sm:text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+        <p className="text-center sm:text-left">
+          Showing <span className="font-semibold text-slate-700">{totalItems === 0 ? 0 : startIndex + 1}</span> to{' '}
+          <span className="font-semibold text-slate-700">{endIndex}</span> of{' '}
+          <span className="font-semibold text-slate-700">{totalItems}</span> entries
         </p>
 
-        <div className="flex items-center gap-3">
-          <nav aria-label="Pagination" className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center sm:justify-between md:justify-end gap-3 w-full md:w-auto">
+          {/* Pagination Navigation */}
+          <nav aria-label="Pagination" className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={currentPage <= 1 || isFetching}
               aria-label="Previous page"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-2xs"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -340,9 +444,9 @@ export default function MembersPage() {
                 disabled={isFetching}
                 aria-current={num === currentPage ? 'page' : undefined}
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition',
+                  'flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border text-xs sm:text-sm font-semibold transition shadow-2xs',
                   num === currentPage
-                    ? 'border-transparent bg-gradient-to-br from-brand-500 to-brand-600 text-white'
+                    ? 'border-transparent bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 )}
               >
@@ -354,23 +458,30 @@ export default function MembersPage() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage >= totalPages || isFetching}
               aria-label="Next page"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-2xs"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </nav>
 
-          <label className="sr-only" htmlFor="page-size">Rows per page</label>
-          <select
-            id="page-size"
-            value={pageSize}
-            onChange={(e) => changePageSize(Number(e.target.value))}
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 focus:border-brand-500 focus:outline-none"
-          >
-            {PAGE_SIZES.map((size) => (
-              <option key={size} value={size}>{size}/ page</option>
-            ))}
-          </select>
+          {/* Rows per page dropdown */}
+          <div className="flex items-center gap-1.5">
+            <label className="sr-only" htmlFor="page-size">
+              Rows per page
+            </label>
+            <select
+              id="page-size"
+              value={pageSize}
+              onChange={(e) => changePageSize(Number(e.target.value))}
+              className="rounded-full border border-slate-200 bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-600 focus:border-brand-500 focus:outline-none shadow-2xs"
+            >
+              {PAGE_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}/ page
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -380,6 +491,7 @@ export default function MembersPage() {
         member={selected}
         onClose={() => setSelected(null)}
         onEdit={(m) => setEditingMember(m)}
+        onViewIdCard={(m) => setIdCardMember(m)}
       />
 
       {/* Member ID Card dialog */}
@@ -405,6 +517,14 @@ export default function MembersPage() {
         onConfirmReject={handleConfirmReject}
       />
 
+      {/* Delete Member dialog */}
+      <DeleteMemberModal
+        open={Boolean(deletingMember)}
+        member={deletingMember}
+        onClose={() => setDeletingMember(null)}
+        onConfirm={handleDeleteMember}
+      />
+
       {/* Add Member dialog */}
       <AddMemberModal
         open={isAddOpen}
@@ -412,15 +532,25 @@ export default function MembersPage() {
         onAddMember={handleAddMember}
       />
 
+      {/* Import Members dialog */}
+      <ImportMembersModal
+        open={isImportOpen}
+        members={members}
+        onClose={() => setIsImportOpen(false)}
+        onImportSuccess={() => {
+          loadMembers(page, pageSize, activeTab, debouncedSearch);
+        }}
+      />
+
       {/* Toast notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-[#1B1F3B] text-white px-5 py-3.5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-          <span className="text-sm font-medium">{toast}</span>
+        <div className="fixed bottom-4 left-4 right-4 z-50 flex items-center gap-3 rounded-2xl bg-[#1B1F3B] px-5 py-3.5 text-white shadow-2xl animate-in slide-in-from-bottom-4 duration-300 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-md">
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+          <span className="min-w-0 flex-1 text-xs sm:text-sm font-medium">{toast}</span>
           <button
             type="button"
             onClick={() => setToast(null)}
-            className="ml-2 rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+            className="ml-2 shrink-0 rounded-full p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition"
           >
             <X className="h-4 w-4" />
           </button>

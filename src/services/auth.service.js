@@ -6,6 +6,8 @@ const FORGET_PASSWORD_API_URL =
   process.env.NEXT_PUBLIC_FORGET_PASSWORD_API_URL || 'http://localhost:5000/api/admin/forget-password';
 const RESET_PASSWORD_API_URL =
   process.env.NEXT_PUBLIC_RESET_PASSWORD_API_URL || 'http://localhost:5000/api/admin/reset-password';
+const VERIFY_RESET_TOKEN_API_URL =
+  process.env.NEXT_PUBLIC_VERIFY_RESET_TOKEN_API_URL || 'http://localhost:5000/api/admin/verify-reset-token';
 const CHANGE_PASSWORD_API_URL =
   process.env.NEXT_PUBLIC_CHANGE_PASSWORD_API_URL || 'http://localhost:5000/api/admin/change-password';
 
@@ -233,6 +235,42 @@ export async function adminResetPassword({ token, newPassword, confirmPassword, 
   } catch (error) {
     console.error('adminResetPassword error:', error);
     throw error;
+  }
+}
+
+/**
+ * Admin Verify Reset Token: Look up token validity & associated email
+ * @param {string} token
+ */
+export async function adminVerifyResetToken(token) {
+  if (!token) {
+    return { valid: false, email: '' };
+  }
+
+  try {
+    const response = await fetch(`${VERIFY_RESET_TOKEN_API_URL}?token=${encodeURIComponent(token.trim())}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.success) {
+      return {
+        valid: data.valid !== false,
+        email: data.email || '',
+        name: data.name || '',
+      };
+    }
+    return {
+      valid: false,
+      message: data.message || 'Invalid or expired token',
+    };
+  } catch (error) {
+    console.error('adminVerifyResetToken error:', error);
+    return { valid: false, error: error.message };
   }
 }
 

@@ -11,7 +11,8 @@ export default function AdminRootLayout({ children }) {
   const isPublicAuthRoute =
     pathname?.includes('/admin/forget-password') ||
     pathname?.includes('/admin/reset-password') ||
-    pathname?.includes('/admin/forgot-password');
+    pathname?.includes('/admin/forgot-password') ||
+    pathname?.includes('/admin/login');
 
   if (isPublicAuthRoute) {
     return <AuthGuard>{children}</AuthGuard>;

@@ -1,6 +1,6 @@
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, redirect } from 'next/navigation';
 import PageHeader from '@/components/common/PageHeader';
 import EmptyState from '@/components/common/EmptyState';
 
@@ -17,6 +17,11 @@ const SECTIONS = {
 export default function AdminSectionPage({ params }) {
   const routeParams = useParams();
   const section = routeParams?.section || params?.section;
+
+  if (section === 'login') {
+    redirect('/login');
+  }
+
   const title = section ? SECTIONS[section] : null;
 
   if (!title) notFound();
