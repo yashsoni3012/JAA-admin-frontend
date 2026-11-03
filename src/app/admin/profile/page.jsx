@@ -60,8 +60,18 @@ function formatDob(val) {
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(() => ({
+    fullName: user?.name || 'Admin User',
+    name: user?.name || 'Admin User',
+    email: user?.email || 'admin@gmail.com',
+    phone: '',
+    mobile: '',
+    address: '',
+    city: 'Ahmedabad',
+    businessName: 'JAA Administration',
+    role: 'Administrator',
+  }));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   const [changePwOpen, setChangePwOpen] = useState(false);
@@ -88,13 +98,7 @@ export default function ProfilePage() {
     setProfile(updated);
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader label="Loading profile details..." />
-      </div>
-    );
-  }
+
 
   if (error && !profile) {
     return (
@@ -192,7 +196,7 @@ export default function ProfilePage() {
             <p className="text-sm font-medium text-slate-500 mt-0.5">{email}</p>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#2832A4] to-[#4F5DEC] px-3.5 py-1 text-xs font-semibold text-white shadow-xs capitalize">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#2832A4] to-[#4F5DEC] px-3.5 py-1 text-xs font-semibold text-white shadow-xs capitalize">
                 <Shield className="h-3 w-3" />
                 {role}
               </span>

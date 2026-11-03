@@ -1,14 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import MobileSidebar from '@/components/admin/MobileSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
-import LogoutModal from '@/components/common/LogoutModal';
 import { SIDEBAR_NAV } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
 import { cn } from '@/lib/utils';
+
+// Lazy-load only modal dialog
+const LogoutModal = dynamic(() => import('@/components/common/LogoutModal'), {
+  ssr: false,
+});
 
 // Works out the header title from the current URL.
 function getPageTitle(pathname) {
@@ -30,6 +35,18 @@ export default function AdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
+  const [customTitle, setCustomTitle] = useState(null);
+
+  useEffect(() => {
+    const handleTitleChange = (e) => {
+      if (typeof e?.detail === 'string') setCustomTitle(e.detail);
+      else if (e?.detail === null) setCustomTitle(null);
+    };
+    window.addEventListener('jaa:set-page-title', handleTitleChange);
+    return () => window.removeEventListener('jaa:set-page-title', handleTitleChange);
+  }, []);
+
+  useEffect(() => { setCustomTitle(null); }, [pathname]);
 
   // Restore collapsed state preference on mount
   useEffect(() => {
@@ -84,23 +101,27 @@ export default function AdminLayout({ children }) {
       <div className="flex min-w-0 flex-1 flex-col bg-[#EEF1FF] transition-all duration-300">
         {/* Topbar */}
         <AdminHeader
-          title={getPageTitle(pathname)}
+          title={customTitle || getPageTitle(pathname)}
           onMenuClick={toggleSidebar}
           sidebarCollapsed={collapsed}
           onLogoutClick={() => setIsLogoutOpen(true)}
         />
 
-        {/* Main Content Area */}
+        {/* Main Content Area: Instant render with zero suspense lag */}
         <main className="flex-1 px-3.5 sm:px-4 pb-6 sm:pb-8 md:px-8 md:pb-10">
           {children}
         </main>
       </div>
 
       {/* Logout Confirmation Modal matching the design */}
-      <LogoutModal
-        open={isLogoutOpen}
-        onClose={() => setIsLogoutOpen(false)}
-      />
+      {isLogoutOpen && (
+        <Suspense fallback={null}>
+          <LogoutModal
+            open={isLogoutOpen}
+            onClose={() => setIsLogoutOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

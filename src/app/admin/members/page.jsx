@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,18 +12,58 @@ import {
   X,
 } from 'lucide-react';
 import { getMembers, createMember, updateMemberStatus, updateMember, deleteMember } from '@/services/admin.service';
-import MemberRow from '@/components/admin/MemberRow';
-import AddMemberModal from '@/components/admin/AddMemberModal';
-import EditMemberModal from '@/components/admin/EditMemberModal';
-import ViewMemberModal from '@/components/admin/ViewMemberModal';
-import RejectMemberModal from '@/components/admin/RejectMemberModal';
-import MemberIdCardModal from '@/components/members/MemberIdCardModal';
-import ImportMembersModal from '@/components/admin/ImportMembersModal';
-import DeleteMemberModal from '@/components/admin/DeleteMemberModal';
 import Button from '@/components/common/Button';
-import EmptyState from '@/components/common/EmptyState';
 import Loader from '@/components/common/Loader';
 import { cn } from '@/lib/utils';
+
+// Lazy-loaded components for optimal performance and chunk splitting
+const MemberRow = dynamic(() => import('@/components/admin/MemberRow'), {
+  ssr: false,
+  loading: () => (
+    <li className="p-4 sm:p-5 flex items-center justify-center text-xs text-slate-400">
+      Loading member...
+    </li>
+  ),
+});
+
+const AddMemberModal = dynamic(() => import('@/components/admin/AddMemberModal'), {
+  ssr: false,
+  loading: () => <Loader label="Loading form..." />,
+});
+
+const EditMemberModal = dynamic(() => import('@/components/admin/EditMemberModal'), {
+  ssr: false,
+  loading: () => <Loader label="Loading editor..." />,
+});
+
+const ViewMemberModal = dynamic(() => import('@/components/admin/ViewMemberModal'), {
+  ssr: false,
+  loading: () => <Loader label="Loading member details..." />,
+});
+
+const RejectMemberModal = dynamic(() => import('@/components/admin/RejectMemberModal'), {
+  ssr: false,
+  loading: () => <Loader label="Loading..." />,
+});
+
+const MemberIdCardModal = dynamic(() => import('@/components/members/MemberIdCardModal'), {
+  ssr: false,
+  loading: () => <Loader label="Loading ID Card..." />,
+});
+
+const ImportMembersModal = dynamic(() => import('@/components/admin/ImportMembersModal'), {
+  ssr: false,
+  loading: () => <Loader label="Loading import tool..." />,
+});
+
+const DeleteMemberModal = dynamic(() => import('@/components/admin/DeleteMemberModal'), {
+  ssr: false,
+  loading: () => <Loader label="Loading..." />,
+});
+
+const EmptyState = dynamic(() => import('@/components/common/EmptyState'), {
+  ssr: false,
+});
 
 const TABS = ['All', 'Pending', 'Approved', 'Rejected'];
 const PAGE_SIZES = [10, 20, 50];
@@ -152,7 +193,7 @@ export default function MembersPage() {
         setCounts(data.counts);
       }
     } catch (err) {
-      console.error('Failed to load members from API:', err);
+      console.warn('Failed to load members from API:', err.message);
     } finally {
       setIsLoading(false);
       setIsFetching(false);
@@ -285,13 +326,7 @@ export default function MembersPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-24">
-        <Loader label="Loading members" />
-      </div>
-    );
-  }
+
 
   return (
     <section className="rounded-2xl border border-white bg-white shadow-card sm:rounded-3xl overflow-hidden">
@@ -389,28 +424,38 @@ export default function MembersPage() {
         </div>
 
         {/* Member list (Card view on mobile, structured row on tablet & desktop) */}
-        {isFetching ? (
+        {(isFetching || (isLoading && members.length === 0)) ? (
           <div className="flex justify-center py-16">
-            <Loader label="Updating members..." />
+            <Loader label="Loading members..." />
           </div>
         ) : members.length === 0 ? (
-          <EmptyState
-            title="No members found"
-            description="Try selecting a different status tab or adjusting your search term."
-          />
+          <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">Loading...</div>}>
+            <EmptyState
+              title="No members found"
+              description="Try selecting a different status tab or adjusting your search term."
+            />
+          </Suspense>
         ) : (
           <ul className="divide-y divide-slate-100">
             {members.map((member) => (
-              <MemberRow
+              <Suspense
                 key={member.id}
-                member={member}
-                onView={setSelected}
-                onIdCard={setIdCardMember}
-                onEdit={(m) => setEditingMember(m)}
-                onApprove={handleApprove}
-                onReject={(m) => setRejectingMember(m)}
-                onDelete={(m) => setDeletingMember(m)}
-              />
+                fallback={
+                  <li className="p-4 sm:p-5 flex items-center justify-center text-xs text-slate-400">
+                    Loading member...
+                  </li>
+                }
+              >
+                <MemberRow
+                  member={member}
+                  onView={setSelected}
+                  onIdCard={setIdCardMember}
+                  onEdit={(m) => setEditingMember(m)}
+                  onApprove={handleApprove}
+                  onReject={(m) => setRejectingMember(m)}
+                  onDelete={(m) => setDeletingMember(m)}
+                />
+              </Suspense>
             ))}
           </ul>
         )}
@@ -486,61 +531,89 @@ export default function MembersPage() {
       </div>
 
       {/* View Member details dialog */}
-      <ViewMemberModal
-        open={Boolean(selected)}
-        member={selected}
-        onClose={() => setSelected(null)}
-        onEdit={(m) => setEditingMember(m)}
-        onViewIdCard={(m) => setIdCardMember(m)}
-      />
+      <Suspense fallback={<Loader label="Loading member details..." />}>
+        {selected && (
+          <ViewMemberModal
+            open={Boolean(selected)}
+            member={selected}
+            onClose={() => setSelected(null)}
+            onEdit={(m) => setEditingMember(m)}
+            onViewIdCard={(m) => setIdCardMember(m)}
+          />
+        )}
+      </Suspense>
 
       {/* Member ID Card dialog */}
-      <MemberIdCardModal
-        open={Boolean(idCardMember)}
-        member={idCardMember}
-        onClose={() => setIdCardMember(null)}
-      />
+      <Suspense fallback={<Loader label="Loading ID Card..." />}>
+        {idCardMember && (
+          <MemberIdCardModal
+            open={Boolean(idCardMember)}
+            member={idCardMember}
+            onClose={() => setIdCardMember(null)}
+          />
+        )}
+      </Suspense>
 
       {/* Edit Member dialog */}
-      <EditMemberModal
-        open={Boolean(editingMember)}
-        member={editingMember}
-        onClose={() => setEditingMember(null)}
-        onMemberUpdated={handleMemberUpdated}
-      />
+      <Suspense fallback={<Loader label="Loading editor..." />}>
+        {editingMember && (
+          <EditMemberModal
+            open={Boolean(editingMember)}
+            member={editingMember}
+            onClose={() => setEditingMember(null)}
+            onMemberUpdated={handleMemberUpdated}
+          />
+        )}
+      </Suspense>
 
       {/* Reject Member dialog */}
-      <RejectMemberModal
-        open={Boolean(rejectingMember)}
-        member={rejectingMember}
-        onClose={() => setRejectingMember(null)}
-        onConfirmReject={handleConfirmReject}
-      />
+      <Suspense fallback={<Loader label="Loading..." />}>
+        {rejectingMember && (
+          <RejectMemberModal
+            open={Boolean(rejectingMember)}
+            member={rejectingMember}
+            onClose={() => setRejectingMember(null)}
+            onConfirmReject={handleConfirmReject}
+          />
+        )}
+      </Suspense>
 
       {/* Delete Member dialog */}
-      <DeleteMemberModal
-        open={Boolean(deletingMember)}
-        member={deletingMember}
-        onClose={() => setDeletingMember(null)}
-        onConfirm={handleDeleteMember}
-      />
+      <Suspense fallback={<Loader label="Loading..." />}>
+        {deletingMember && (
+          <DeleteMemberModal
+            open={Boolean(deletingMember)}
+            member={deletingMember}
+            onClose={() => setDeletingMember(null)}
+            onConfirm={handleDeleteMember}
+          />
+        )}
+      </Suspense>
 
       {/* Add Member dialog */}
-      <AddMemberModal
-        open={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
-        onAddMember={handleAddMember}
-      />
+      <Suspense fallback={<Loader label="Loading form..." />}>
+        {isAddOpen && (
+          <AddMemberModal
+            open={isAddOpen}
+            onClose={() => setIsAddOpen(false)}
+            onAddMember={handleAddMember}
+          />
+        )}
+      </Suspense>
 
       {/* Import Members dialog */}
-      <ImportMembersModal
-        open={isImportOpen}
-        members={members}
-        onClose={() => setIsImportOpen(false)}
-        onImportSuccess={() => {
-          loadMembers(page, pageSize, activeTab, debouncedSearch);
-        }}
-      />
+      <Suspense fallback={<Loader label="Loading import tool..." />}>
+        {isImportOpen && (
+          <ImportMembersModal
+            open={isImportOpen}
+            members={members}
+            onClose={() => setIsImportOpen(false)}
+            onImportSuccess={() => {
+              loadMembers(page, pageSize, activeTab, debouncedSearch);
+            }}
+          />
+        )}
+      </Suspense>
 
       {/* Toast notification */}
       {toast && (

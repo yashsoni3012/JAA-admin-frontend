@@ -126,7 +126,7 @@ export async function getMemberById(id) {
       }
     }
   } catch (err) {
-    console.error(`[admin.service] Failed to fetch member #${id}:`, err);
+    console.warn(`[admin.service] Failed to fetch member #${id}:`, err.message);
   }
   return null;
 }
@@ -245,7 +245,7 @@ export async function getMembers(params = {}) {
 
     console.warn(`[admin.service] API responded with ${res.status}. Falling back to cached members.`);
   } catch (err) {
-    console.error('[admin.service] Failed to fetch members from API:', err);
+    console.warn('[admin.service] Failed to fetch members from API:', err.message);
   }
 
   // Graceful fallback dummy members if API is temporarily unavailable

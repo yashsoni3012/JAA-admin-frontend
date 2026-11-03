@@ -1,22 +1,60 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { LogOut, ChevronDown, Radio, Users } from 'lucide-react';
 import { SIDEBAR_NAV } from '@/constants/navigation';
 import LogoutModal from '@/components/common/LogoutModal';
 import { cn } from '@/lib/utils';
 
-// Sidebar contents with #EEF1FF background and smooth collapsible animations
-export default function AdminSidebar({
+export default function AdminSidebar(props) {
+  return (
+    <Suspense fallback={null}>
+      <AdminSidebarInner {...props} />
+    </Suspense>
+  );
+}
+
+function AdminSidebarInner({
   onNavigate,
   collapsed = false,
   onToggleCollapse,
   onLogoutClick,
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [internalLogoutOpen, setInternalLogoutOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(true);
+  const [collapsedFlyoutOpen, setCollapsedFlyoutOpen] = useState(false);
+
+  // Read current message tab reactively from searchParams
+  const tab = searchParams?.get('tab');
+  const isGroupActive = tab === 'group' || tab === 'groups' || tab === 'group_message';
+
+  // Automatically keep messages dropdown open when on /admin/messages
+  useEffect(() => {
+    if (pathname.startsWith('/admin/messages')) {
+      setMessagesOpen(true);
+    }
+  }, [pathname]);
+
+  // Eagerly prefetch all admin routes in the background on mount for instant zero-latency navigation
+  useEffect(() => {
+    SIDEBAR_NAV.forEach((item) => {
+      try {
+        router.prefetch(item.href);
+      } catch {
+        // ignore
+      }
+    });
+    try {
+      router.prefetch('/admin/messages?tab=broadcast');
+      router.prefetch('/admin/messages?tab=group');
+    } catch {}
+  }, [router]);
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -91,12 +129,168 @@ export default function AdminSidebar({
           )}
         >
           {SIDEBAR_NAV.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isMessages = item.label === 'Messages' || item.href === '/admin/messages';
+            const isActive = isMessages
+              ? pathname === '/admin/messages' || pathname.startsWith('/admin/messages/')
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
+
+            // 1. Messages item with dropdown (Broadcast default & Group Message)
+            if (isMessages) {
+              if (collapsed) {
+                return (
+                  <div key={item.href} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setCollapsedFlyoutOpen((prev) => !prev)}
+                      title="Messages: Broadcast & Group Message"
+                      className={cn(
+                        'h-14 w-14 justify-center rounded-2xl group flex items-center transition-all duration-200 cursor-pointer',
+                        isActive
+                          ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
+                          : 'text-slate-600 hover:bg-white/70 hover:text-ink'
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                          isActive ? 'text-white' : 'text-slate-500'
+                        )}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {collapsedFlyoutOpen && (
+                      <div className="absolute left-full top-0 ml-3 z-50 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95">
+                        <Link
+                          href="/admin/messages?tab=broadcast"
+                          onClick={() => {
+                            setCollapsedFlyoutOpen(false);
+                            if (onNavigate) onNavigate();
+                          }}
+                          className={cn(
+                            'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition',
+                            isActive && !isGroupActive
+                              ? 'bg-indigo-50 text-[#2832A4] font-bold'
+                              : 'text-slate-600 hover:bg-slate-50'
+                          )}
+                        >
+                          <Radio className="h-4 w-4" />
+                          <span>Broadcast (default)</span>
+                        </Link>
+                        <Link
+                          href="/admin/messages?tab=group"
+                          onClick={() => {
+                            setCollapsedFlyoutOpen(false);
+                            if (onNavigate) onNavigate();
+                          }}
+                          className={cn(
+                            'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition mt-1',
+                            isActive && isGroupActive
+                              ? 'bg-indigo-50 text-[#2832A4] font-bold'
+                              : 'text-slate-600 hover:bg-slate-50'
+                          )}
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>Group Message</span>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div key={item.href} className="w-full space-y-1">
+                  <div
+                    onClick={() => {
+                      setMessagesOpen((prev) => !prev);
+                      if (!isActive) {
+                        router.push('/admin/messages?tab=broadcast');
+                        if (onNavigate) onNavigate();
+                      }
+                    }}
+                    className={cn(
+                      'group flex items-center justify-between transition-all duration-200 cursor-pointer w-full rounded-full px-5 py-3.5 font-medium select-none',
+                      isActive
+                        ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
+                        : 'text-slate-600 hover:bg-white/70 hover:text-ink'
+                    )}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <Icon
+                        className={cn(
+                          'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                          isActive ? 'text-white' : 'text-slate-500'
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className="whitespace-nowrap overflow-hidden text-[15px]">
+                        {item.label}
+                      </span>
+                    </div>
+
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 shrink-0 transition-transform duration-200',
+                        isActive ? 'text-white/80' : 'text-slate-400',
+                        messagesOpen && 'rotate-180'
+                      )}
+                    />
+                  </div>
+
+                  {/* Dropdown Menu in Sidebar for Broadcast & Group Message */}
+                  {messagesOpen && (
+                    <div className="ml-5 pl-3 border-l-2 border-indigo-200/70 space-y-1 py-1 animate-in fade-in-50 duration-200">
+                      <Link
+                        href="/admin/messages?tab=broadcast"
+                        onClick={onNavigate}
+                        className={cn(
+                          'flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer',
+                          isActive && !isGroupActive
+                            ? 'bg-white text-[#2832A4] font-bold shadow-xs'
+                            : 'text-slate-600 hover:bg-white/60 hover:text-ink'
+                        )}
+                      >
+                        <Radio className="h-3.5 w-3.5" />
+                        <span>Broadcast (default)</span>
+                      </Link>
+
+                      <Link
+                        href="/admin/messages?tab=group"
+                        onClick={onNavigate}
+                        className={cn(
+                          'flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer',
+                          isActive && isGroupActive
+                            ? 'bg-white text-[#2832A4] font-bold shadow-xs'
+                            : 'text-slate-600 hover:bg-white/60 hover:text-ink'
+                        )}
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        <span>Group Message</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Normal menu items
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
+                onMouseEnter={() => {
+                  try {
+                    router.prefetch(item.href);
+                  } catch {}
+                }}
+                onTouchStart={() => {
+                  try {
+                    router.prefetch(item.href);
+                  } catch {}
+                }}
                 onClick={onNavigate}
                 title={item.label}
                 aria-current={isActive ? 'page' : undefined}
