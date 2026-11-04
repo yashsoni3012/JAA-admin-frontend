@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Menu, Settings, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,6 +19,36 @@ export default function AdminHeader({
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [internalLogoutOpen, setInternalLogoutOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Detect scroll to add refined border and shadow on sticky header
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 8);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Close profile dropdown on outside click or Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('#profile-menu-container')) {
+        setMenuOpen(false);
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('click', handleOutsideClick);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('click', handleOutsideClick);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [menuOpen]);
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -31,7 +61,12 @@ export default function AdminHeader({
 
   return (
     <>
-      <header className="flex items-center justify-between gap-3 sm:gap-4 bg-[#EEF1FF] px-3.5 sm:px-6 py-3.5 sm:py-6 md:px-8 md:py-7">
+      <header
+        className={cn(
+          'sticky top-0 z-20 flex items-center justify-between gap-3 sm:gap-4 bg-[#EEF1FF]/95 backdrop-blur-md px-3.5 sm:px-6 py-3.5 sm:py-5 md:px-8 transition-all duration-200',
+          scrolled ? 'border-b border-[#3F4BC4]/10 shadow-xs' : 'border-b border-transparent'
+        )}
+      >
         {/* Left side: Menu Icon + Page Title */}
         <div className="flex min-w-0 items-center gap-3.5">
           <button
@@ -54,8 +89,7 @@ export default function AdminHeader({
         </div>
 
         {/* Right side: Profile card pill matching reference design */}
-       
-<div className="relative">
+        <div id="profile-menu-container" className="relative">
   <button
     type="button"
     onClick={() => setMenuOpen((prev) => !prev)}

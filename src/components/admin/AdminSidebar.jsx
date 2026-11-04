@@ -27,19 +27,12 @@ function AdminSidebarInner({
   const router = useRouter();
 
   const [internalLogoutOpen, setInternalLogoutOpen] = useState(false);
-  const [messagesOpen, setMessagesOpen] = useState(true);
+  const [messagesOpen, setMessagesOpen] = useState(false);
   const [collapsedFlyoutOpen, setCollapsedFlyoutOpen] = useState(false);
 
   // Read current message tab reactively from searchParams
   const tab = searchParams?.get('tab');
   const isGroupActive = tab === 'group' || tab === 'groups' || tab === 'group_message';
-
-  // Automatically keep messages dropdown open when on /admin/messages
-  useEffect(() => {
-    if (pathname.startsWith('/admin/messages')) {
-      setMessagesOpen(true);
-    }
-  }, [pathname]);
 
   // Eagerly prefetch all admin routes in the background on mount for instant zero-latency navigation
   useEffect(() => {
@@ -207,7 +200,6 @@ function AdminSidebarInner({
                       href="/admin/messages?tab=broadcast"
                       prefetch={true}
                       onClick={() => {
-                        setMessagesOpen(true);
                         if (onNavigate) onNavigate();
                       }}
                       className={cn(
@@ -230,15 +222,23 @@ function AdminSidebarInner({
                         </span>
                       </div>
 
-                      <button
-                        type="button"
+                      <span
+                        role="button"
+                        tabIndex={0}
                         aria-label="Toggle messages dropdown"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           setMessagesOpen((prev) => !prev);
                         }}
-                        className="p-1 -mr-1 rounded-full hover:bg-white/20 transition cursor-pointer"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setMessagesOpen((prev) => !prev);
+                          }
+                        }}
+                        className="p-1.5 -mr-1 rounded-full hover:bg-white/20 transition cursor-pointer flex items-center justify-center"
                       >
                         <ChevronDown
                           className={cn(
@@ -247,7 +247,7 @@ function AdminSidebarInner({
                             messagesOpen && 'rotate-180'
                           )}
                         />
-                      </button>
+                      </span>
                     </Link>
                   </div>
 

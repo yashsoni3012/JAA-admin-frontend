@@ -620,7 +620,7 @@ export default function PostsPage() {
                             disabled={isLoadingDetail}
                             title="View Details"
                             aria-label="View Details"
-                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 disabled:opacity-50"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 disabled:opacity-50 cursor-pointer"
                           >
                             <Eye className="h-4 w-4 stroke-[2]" />
                           </button>
@@ -630,9 +630,9 @@ export default function PostsPage() {
                             onClick={() => setDeletingPost(item)}
                             title="Delete Post"
                             aria-label="Delete Post"
-                            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-red-100"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-white text-red-500 transition-all hover:border-red-400 hover:bg-red-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 stroke-[2]" />
                           </button>
                         </div>
                       </td>

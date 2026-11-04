@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Radio,
   Plus,
@@ -8,6 +8,9 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Calendar,
+  X,
   Eye,
   Trash2,
   Paperclip,
@@ -36,14 +39,195 @@ export default function BroadcastListView({
   onViewBroadcast,
   onDeleteBroadcast,
 }) {
-  const [filterSentTo, setFilterSentTo] = useState('ALL'); // 'ALL' | 'All Members' | 'Committee Members'
+  // Popover Toggle & Ref
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const filterDropdownRef = useRef(null);
 
-  const totalItems = pagination.total_items ?? pagination.total ?? broadcasts.length;
+  // Draft filters
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterSentTo, setFilterSentTo] = useState('');
+  const [filterSentOn, setFilterSentOn] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterSortBy, setFilterSortBy] = useState('');
+
+  // Applied filters
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: '',
+    sentTo: '',
+    sentOn: '',
+    status: '',
+    sortBy: '',
+  });
+
+  // Sync draft states on opening popover
+  const handleToggleFilterDropdown = () => {
+    if (!showFilterDropdown) {
+      setFilterSearch(appliedFilters.search);
+      setFilterSentTo(appliedFilters.sentTo);
+      setFilterSentOn(appliedFilters.sentOn);
+      setFilterStatus(appliedFilters.status);
+      setFilterSortBy(appliedFilters.sortBy);
+      setShowFilterDropdown(true);
+    } else {
+      setShowFilterDropdown(false);
+    }
+  };
+
+  // Close on outside click or Escape
+  useEffect(() => {
+    if (!showFilterDropdown) return;
+    const handleOutsideClick = (e) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target)) {
+        setShowFilterDropdown(false);
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setShowFilterDropdown(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showFilterDropdown]);
+
+  // Active filter count
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (appliedFilters.search) count++;
+    if (appliedFilters.sentTo) count++;
+    if (appliedFilters.sentOn) count++;
+    if (appliedFilters.status) count++;
+    if (appliedFilters.sortBy) count++;
+    return count;
+  }, [appliedFilters]);
+
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      search: filterSearch.trim(),
+      sentTo: filterSentTo,
+      sentOn: filterSentOn,
+      status: filterStatus,
+      sortBy: filterSortBy,
+    });
+    if (onPageChange) onPageChange(1);
+    setShowFilterDropdown(false);
+  };
+
+  const handleResetFilters = () => {
+    setFilterSearch('');
+    setFilterSentTo('');
+    setFilterSentOn('');
+    setFilterStatus('');
+    setFilterSortBy('');
+    setAppliedFilters({
+      search: '',
+      sentTo: '',
+      sentOn: '',
+      status: '',
+      sortBy: '',
+    });
+    if (onPageChange) onPageChange(1);
+  };
+
+  // Filter & Sort broadcasts
+  const displayedBroadcasts = useMemo(() => {
+    let result = [...broadcasts];
+
+    // 1. Search (popover or top search bar)
+    const q = (appliedFilters.search || search || '').toLowerCase().trim();
+    if (q) {
+      result = result.filter((b) => {
+        const title = (b.title || '').toLowerCase();
+        const msg = (b.message || '').toLowerCase();
+        const sentTo = (b.sentTo || b.sendTo || '').toLowerCase();
+        return title.includes(q) || msg.includes(q) || sentTo.includes(q);
+      });
+    }
+
+    // 2. Sent To
+    if (appliedFilters.sentTo) {
+      const val = appliedFilters.sentTo.toLowerCase();
+      result = result.filter((b) => {
+        const sentTo = (b.sentTo || b.sendTo || '').toLowerCase();
+        return sentTo.includes(val);
+      });
+    }
+
+    // 3. Sent On Date
+    if (appliedFilters.sentOn) {
+      const targetDate = appliedFilters.sentOn; // YYYY-MM-DD
+      result = result.filter((b) => {
+        const checkDate = (val) => {
+          if (!val) return false;
+          const d = new Date(val);
+          if (isNaN(d.getTime())) {
+            return String(val).toLowerCase().includes(targetDate.toLowerCase());
+          }
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const localIso = `${y}-${m}-${day}`;
+          if (localIso === targetDate) return true;
+          try {
+            if (d.toISOString().split('T')[0] === targetDate) return true;
+          } catch {}
+          return false;
+        };
+        return checkDate(b.sentOn) || checkDate(b.createdAt) || checkDate(b.date);
+      });
+    }
+
+    // 4. Status
+    if (appliedFilters.status) {
+      const val = appliedFilters.status.toLowerCase();
+      result = result.filter((b) => (b.status || '').toLowerCase() === val);
+    }
+
+    // 5. Sort By
+    if (appliedFilters.sortBy) {
+      result.sort((a, b) => {
+        const titleA = (a.title || '').toLowerCase();
+        const titleB = (b.title || '').toLowerCase();
+        const dateA = new Date(a.sentOn || a.createdAt || a.date || 0).getTime();
+        const dateB = new Date(b.sentOn || b.createdAt || b.date || 0).getTime();
+
+        switch (appliedFilters.sortBy) {
+          case 'newest':
+            return dateB - dateA;
+          case 'oldest':
+            return dateA - dateB;
+          case 'title_asc':
+            return titleA.localeCompare(titleB);
+          case 'title_desc':
+            return titleB.localeCompare(titleA);
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return result;
+  }, [broadcasts, search, appliedFilters]);
+
+  // Pagination calculation
+  const isCustomFiltered = activeFilterCount > 0;
+  const totalItems = isCustomFiltered
+    ? displayedBroadcasts.length
+    : pagination.total_items ?? pagination.total ?? broadcasts.length;
   const totalPages = Math.max(1, pagination.total_page ?? pagination.totalPages ?? Math.ceil(totalItems / pageSize));
   const currentPage = Math.min(Math.max(1, page), totalPages);
   const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + broadcasts.length, totalItems);
+
+  const paginatedBroadcasts = useMemo(() => {
+    if (isCustomFiltered) {
+      return displayedBroadcasts.slice(startIndex, startIndex + pageSize);
+    }
+    return displayedBroadcasts;
+  }, [displayedBroadcasts, isCustomFiltered, startIndex, pageSize]);
+
+  const endIndex = Math.min(startIndex + (isCustomFiltered ? paginatedBroadcasts.length : displayedBroadcasts.length), totalItems);
 
   // Dynamic pagination window
   const maxButtons = 5;
@@ -57,11 +241,6 @@ export default function BroadcastListView({
     { length: Math.max(1, endPage - startPage + 1) },
     (_, i) => startPage + i
   );
-
-  const displayedBroadcasts = broadcasts.filter((b) => {
-    if (filterSentTo === 'ALL') return true;
-    return (b.sentTo || b.sendTo || '').toLowerCase() === filterSentTo.toLowerCase();
-  });
 
   return (
     <section className="rounded-3xl border border-white bg-white p-5 sm:p-7 md:p-8 shadow-card space-y-6">
@@ -89,7 +268,7 @@ export default function BroadcastListView({
           </Button>
 
           {/* + Add Group Button */}
-          <Button
+          {/* <Button
             type="button"
             variant="primary"
             onClick={onAddGroup}
@@ -97,7 +276,7 @@ export default function BroadcastListView({
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>Add Group</span>
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -115,76 +294,232 @@ export default function BroadcastListView({
           />
         </div>
 
-        {/* Filters Dropdown Button */}
-        <div className="relative self-end sm:self-auto">
+        {/* Filters Dropdown Button matching Groups View */}
+        <div ref={filterDropdownRef} className="relative self-end sm:self-auto">
           <button
             type="button"
-            onClick={() => setShowFilterDropdown((prev) => !prev)}
+            onClick={handleToggleFilterDropdown}
             className={cn(
               'rounded-full border px-4 py-2.5 text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition shadow-2xs cursor-pointer',
-              filterSentTo !== 'ALL'
+              activeFilterCount > 0
                 ? 'border-[#2832A4] bg-indigo-50/70 text-[#2832A4]'
                 : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
             <span>Filters</span>
-            {filterSentTo !== 'ALL' && (
-              <span className="h-2 w-2 rounded-full bg-[#2832A4]" />
+            {activeFilterCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2832A4] text-white text-[10px] font-bold">
+                {activeFilterCount}
+              </span>
             )}
           </button>
 
+          {/* Floating Filter Popover Card */}
           {showFilterDropdown && (
-            <div className="absolute right-0 top-full mt-2 z-20 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95">
+            <div className="absolute right-0 top-full mt-2.5 z-40 w-[340px] sm:w-[380px] max-w-[calc(100vw-2rem)] rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl animate-in fade-in-50 zoom-in-95 duration-150 space-y-4">
+              {/* Top-Right Red Close Button */}
               <button
                 type="button"
-                onClick={() => {
-                  setFilterSentTo('ALL');
-                  setShowFilterDropdown(false);
-                }}
-                className={cn(
-                  'w-full text-left px-3.5 py-2 rounded-xl text-xs font-semibold transition',
-                  filterSentTo === 'ALL'
-                    ? 'bg-indigo-50 text-[#2832A4]'
-                    : 'text-slate-600 hover:bg-slate-50'
-                )}
+                onClick={() => setShowFilterDropdown(false)}
+                title="Close filters"
+                aria-label="Close filters"
+                className="absolute top-5 right-5 h-7 w-7 rounded-full bg-[#FFEAEB] text-[#FF4D4F] hover:bg-[#FFD9DC] flex items-center justify-center transition-colors cursor-pointer"
               >
-                All Recipients
+                <X className="h-4 w-4 stroke-[2.5]" />
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterSentTo('All Members');
-                  setShowFilterDropdown(false);
-                }}
-                className={cn(
-                  'w-full text-left px-3.5 py-2 rounded-xl text-xs font-semibold transition mt-0.5',
-                  filterSentTo === 'All Members'
-                    ? 'bg-indigo-50 text-[#2832A4]'
-                    : 'text-slate-600 hover:bg-slate-50'
-                )}
-              >
-                All Members
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterSentTo('Committee Members');
-                  setShowFilterDropdown(false);
-                }}
-                className={cn(
-                  'w-full text-left px-3.5 py-2 rounded-xl text-xs font-semibold transition mt-0.5',
-                  filterSentTo === 'Committee Members'
-                    ? 'bg-indigo-50 text-[#2832A4]'
-                    : 'text-slate-600 hover:bg-slate-50'
-                )}
-              >
-                Committee Members
-              </button>
+
+              {/* 1. Search Broadcasts */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-ink mb-1.5 block">
+                  Search Broadcasts
+                </label>
+                <input
+                  type="text"
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  placeholder="Search broadcast..."
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm text-ink placeholder:text-slate-400 focus:border-[#2832A4] focus:outline-none focus:ring-2 focus:ring-[#2832A4]/10 transition shadow-2xs"
+                />
+              </div>
+
+              {/* 2. Sent To */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-ink mb-1.5 block">
+                  Sent To
+                </label>
+                <div className="relative">
+                  <select
+                    value={filterSentTo}
+                    onChange={(e) => setFilterSentTo(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-xs sm:text-sm text-ink focus:border-[#2832A4] focus:outline-none focus:ring-2 focus:ring-[#2832A4]/10 transition shadow-2xs cursor-pointer"
+                  >
+                    <option value="">Select recipient</option>
+                    <option value="All Members">All Members</option>
+                    <option value="Committee Members">Committee Members</option>
+                    <option value="Custom Group">Custom Group</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+
+              {/* 3. Sent On Date Picker */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-ink mb-1.5 block">
+                  Sent On
+                </label>
+                <div className="relative">
+                  <Calendar className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type={filterSentOn ? 'date' : 'text'}
+                    onFocus={(e) => (e.target.type = 'date')}
+                    onBlur={(e) => {
+                      if (!e.target.value) e.target.type = 'text';
+                    }}
+                    value={filterSentOn}
+                    onChange={(e) => setFilterSentOn(e.target.value)}
+                    placeholder="Select date"
+                    className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm text-ink placeholder:text-slate-400 focus:border-[#2832A4] focus:outline-none focus:ring-2 focus:ring-[#2832A4]/10 transition shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* 4. Status */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-ink mb-1.5 block">
+                  Status
+                </label>
+                <div className="relative">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-xs sm:text-sm text-ink focus:border-[#2832A4] focus:outline-none focus:ring-2 focus:ring-[#2832A4]/10 transition shadow-2xs cursor-pointer"
+                  >
+                    <option value="">Select status</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Failed">Failed</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+
+              {/* 5. Sort By */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-ink mb-1.5 block">
+                  Sort By
+                </label>
+                <div className="relative">
+                  <select
+                    value={filterSortBy}
+                    onChange={(e) => setFilterSortBy(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-2.5 pr-10 text-xs sm:text-sm text-ink focus:border-[#2832A4] focus:outline-none focus:ring-2 focus:ring-[#2832A4]/10 transition shadow-2xs cursor-pointer"
+                  >
+                    <option value="">Select</option>
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="title_asc">Title (A - Z)</option>
+                    <option value="title_desc">Title (Z - A)</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+
+              {/* 6. Action Buttons */}
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="flex-1 rounded-full border border-slate-200 bg-white py-2.5 px-5 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95 cursor-pointer shadow-2xs text-center"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyFilters}
+                  className="flex-1 rounded-full border border-[#2832A4] bg-white py-2.5 px-5 text-xs sm:text-sm font-semibold text-[#2832A4] hover:bg-blue-50 transition active:scale-95 cursor-pointer shadow-2xs text-center"
+                >
+                  Apply Filters
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Active Filter Badges */}
+      {activeFilterCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <span className="text-xs font-semibold text-slate-400">Active Filters:</span>
+          {appliedFilters.search && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2832A4] border border-blue-100">
+              <span>Search: "{appliedFilters.search}"</span>
+              <button
+                type="button"
+                onClick={() => setAppliedFilters((prev) => ({ ...prev, search: '' }))}
+                className="hover:text-red-500"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {appliedFilters.sentTo && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2832A4] border border-blue-100">
+              <span>Sent To: {appliedFilters.sentTo}</span>
+              <button
+                type="button"
+                onClick={() => setAppliedFilters((prev) => ({ ...prev, sentTo: '' }))}
+                className="hover:text-red-500"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {appliedFilters.sentOn && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2832A4] border border-blue-100">
+              <span>Date: {appliedFilters.sentOn}</span>
+              <button
+                type="button"
+                onClick={() => setAppliedFilters((prev) => ({ ...prev, sentOn: '' }))}
+                className="hover:text-red-500"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {appliedFilters.status && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2832A4] border border-blue-100">
+              <span>Status: {appliedFilters.status}</span>
+              <button
+                type="button"
+                onClick={() => setAppliedFilters((prev) => ({ ...prev, status: '' }))}
+                className="hover:text-red-500"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {appliedFilters.sortBy && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2832A4] border border-blue-100">
+              <span>Sort: {appliedFilters.sortBy}</span>
+              <button
+                type="button"
+                onClick={() => setAppliedFilters((prev) => ({ ...prev, sortBy: '' }))}
+                className="hover:text-red-500"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="text-xs text-red-500 hover:underline font-semibold ml-1 cursor-pointer"
+          >
+            Clear All
+          </button>
+        </div>
+      )}
 
       {/* Broadcasts Table matching Image 3 styling */}
       <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-2xs">
@@ -216,7 +551,7 @@ export default function BroadcastListView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {displayedBroadcasts.map((b) => (
+              {paginatedBroadcasts.map((b) => (
                 <tr key={b.id} className="hover:bg-slate-50/60 transition group">
                   <td className="px-5 py-4 font-bold text-ink whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -232,7 +567,7 @@ export default function BroadcastListView({
                     {b.message}
                   </td>
                   <td className="px-5 py-4 text-slate-500 whitespace-nowrap">
-                    {b.sentOn}
+                    {b.sentOn || b.createdAt || '-'}
                   </td>
                   <td className="px-5 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-[#2832A4] border border-indigo-100/70">
@@ -241,7 +576,7 @@ export default function BroadcastListView({
                   </td>
                   <td className="px-5 py-4 text-center whitespace-nowrap">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border border-[#A6F4C5] bg-[#D1FADF]/70 text-[#027A48]">
-                      Delivered
+                      {b.status || 'Delivered'}
                     </span>
                   </td>
                   <td className="px-5 py-4 text-center whitespace-nowrap">
@@ -276,7 +611,7 @@ export default function BroadcastListView({
         )}
       </div>
 
-      {/* Footer Matching Groups List */}
+      {/* Footer matching JAA design */}
       <div className="flex flex-col gap-3.5 border-t border-slate-100 pt-5 text-xs sm:text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
         <p className="text-center sm:text-left">
           Showing <span className="font-semibold text-slate-700">{totalItems === 0 ? 0 : startIndex + 1}</span> to{' '}
@@ -286,7 +621,7 @@ export default function BroadcastListView({
 
         <div className="flex flex-wrap items-center justify-center sm:justify-between md:justify-end gap-3 w-full md:w-auto">
           {/* Pagination Navigation */}
-          <nav aria-label="Broadcast Pagination" className="flex items-center gap-1.5 sm:gap-2">
+          <nav aria-label="Pagination" className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
