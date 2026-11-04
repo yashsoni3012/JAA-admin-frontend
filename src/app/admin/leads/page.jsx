@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   ArrowDownCircle,
   Eye,
-  Pencil,
   Trash2,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   X,
 } from 'lucide-react';
-import Button from '@/components/common/Button';
-import Loader from '@/components/common/Loader';
+import { TableSkeleton } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState';
 import ViewLeadView from '@/components/leads/ViewLeadView';
 import DeleteLeadModal from '@/components/leads/DeleteLeadModal';
@@ -28,18 +27,7 @@ import { cn } from '@/lib/utils';
 const PAGE_SIZES = [5, 10, 20, 50];
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-    hasNext: false,
-    hasPrev: false,
-  });
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -63,43 +51,36 @@ export default function LeadsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Load leads from backend
-  const loadLeads = useCallback(
-    async (targetPage = 1, targetSize = 10, targetSearch = '') => {
-      setIsFetching(true);
-      try {
-        const res = await getLeads({
-          page: targetPage,
-          limit: targetSize,
-          search: targetSearch,
-        });
+  // TanStack Query caching
+  const {
+    data: leadsData,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: ['leads', { page, pageSize, debouncedSearch }],
+    queryFn: () =>
+      getLeads({
+        page,
+        limit: pageSize,
+        search: debouncedSearch,
+      }),
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+  });
 
-        setLeads(res.leads || []);
-        if (res.pagination) {
-          setPagination({
-            total: res.pagination.total ?? res.leads.length,
-            page: res.pagination.page ?? targetPage,
-            limit: res.pagination.limit ?? targetSize,
-            totalPages:
-              res.pagination.totalPages ??
-              Math.max(1, Math.ceil((res.pagination.total ?? res.leads.length) / targetSize)),
-            hasNext: Boolean(res.pagination.hasNext),
-            hasPrev: Boolean(res.pagination.hasPrev),
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load leads:', err);
-      } finally {
-        setIsLoading(false);
-        setIsFetching(false);
-      }
-    },
-    []
+  const leads = leadsData?.leads || [];
+  const rawPagination = leadsData?.pagination || {};
+  const totalItems = rawPagination.total ?? leads.length;
+  const totalPages = Math.max(
+    1,
+    rawPagination.totalPages ?? Math.ceil(totalItems / pageSize)
   );
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
 
-  useEffect(() => {
-    loadLeads(page, pageSize, debouncedSearch);
-  }, [loadLeads, page, pageSize, debouncedSearch]);
+  const invalidateLeads = () => {
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+  };
 
   // When clicking on View button: call id-wise API http://localhost:5000/api/admin/leads/:id
   const handleViewLead = async (leadItem) => {
@@ -110,7 +91,6 @@ export default function LeadsPage() {
       setCurrentView('VIEW');
     } catch (err) {
       console.error('Failed to fetch lead details:', err);
-      // Fallback to current item if single fetch encounters an error
       setSelectedLead(leadItem);
       setCurrentView('VIEW');
     } finally {
@@ -123,8 +103,34 @@ export default function LeadsPage() {
     await deleteLead(id);
     setToast('Lead deleted successfully.');
     setTimeout(() => setToast(null), 3500);
-    loadLeads(page, pageSize, debouncedSearch);
+    invalidateLeads();
   };
+
+  // Client-side search filtering fallback for instant responsiveness
+  const filteredLeads = useMemo(() => {
+    if (!debouncedSearch.trim()) return leads;
+    const q = debouncedSearch.toLowerCase().trim();
+    return leads.filter((l) => {
+      const title = (l.title || '').toLowerCase();
+      const source = (l.source || '').toLowerCase();
+      const desc = (l.description || '').toLowerCase();
+      const status = (l.status || '').toLowerCase();
+      const name = (l.member?.name || '').toLowerCase();
+      const business = (l.member?.business || '').toLowerCase();
+      const mobile = (l.member?.mobile || '').toLowerCase();
+      const city = (l.member?.city || '').toLowerCase();
+      return (
+        title.includes(q) ||
+        source.includes(q) ||
+        desc.includes(q) ||
+        status.includes(q) ||
+        name.includes(q) ||
+        business.includes(q) ||
+        mobile.includes(q) ||
+        city.includes(q)
+      );
+    });
+  }, [leads, debouncedSearch]);
 
   // Export current leads to CSV
   const handleExportCsv = () => {
@@ -170,38 +176,6 @@ export default function LeadsPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Client-side search filtering fallback for instant responsiveness
-  const filteredLeads = useMemo(() => {
-    if (!debouncedSearch.trim()) return leads;
-    const q = debouncedSearch.toLowerCase().trim();
-    return leads.filter((l) => {
-      const title = (l.title || '').toLowerCase();
-      const source = (l.source || '').toLowerCase();
-      const desc = (l.description || '').toLowerCase();
-      const status = (l.status || '').toLowerCase();
-      const name = (l.member?.name || '').toLowerCase();
-      const business = (l.member?.business || '').toLowerCase();
-      const mobile = (l.member?.mobile || '').toLowerCase();
-      const city = (l.member?.city || '').toLowerCase();
-      return (
-        title.includes(q) ||
-        source.includes(q) ||
-        desc.includes(q) ||
-        status.includes(q) ||
-        name.includes(q) ||
-        business.includes(q) ||
-        mobile.includes(q) ||
-        city.includes(q)
-      );
-    });
-  }, [leads, debouncedSearch]);
-
-  // Pagination calculation
-  const totalItems = pagination.total;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-
   const pageNumbers = useMemo(() => {
     const pages = [];
     const maxVisible = 5;
@@ -215,14 +189,6 @@ export default function LeadsPage() {
     }
     return pages;
   }, [currentPage, totalPages]);
-
-  // Format mobile numbers with +91 if needed
-  const formatMobileNumber = (num) => {
-    if (!num || num === '-') return '+91 9988776655';
-    const clean = String(num).trim();
-    if (clean.startsWith('+')) return clean;
-    return `+91 ${clean}`;
-  };
 
   // IF IN VIEW MODE: RENDER VIEW LEAD VIEW MATCHING IMAGE 2
   if (currentView === 'VIEW' && selectedLead) {
@@ -241,7 +207,7 @@ export default function LeadsPage() {
     <div className="space-y-6">
       {/* MAIN CONTAINER MATCHING IMAGE 1 */}
       <section className="rounded-3xl border border-white bg-white p-6 md:p-8 shadow-card space-y-6">
-        {/* Title on Left + Export CSV Button on Right (replaces Add Leads) */}
+        {/* Title on Left + Export CSV Button on Right */}
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl md:text-2xl font-bold text-[#1B1F3B] tracking-tight">
             Leads
@@ -273,10 +239,8 @@ export default function LeadsPage() {
         </div>
 
         {/* LEADS TABLE */}
-        {isLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader label="Loading leads..." />
-          </div>
+        {isLoading && leads.length === 0 ? (
+          <TableSkeleton rows={6} cols={5} />
         ) : filteredLeads.length === 0 ? (
           <div className="py-12">
             <EmptyState
@@ -330,7 +294,7 @@ export default function LeadsPage() {
                         )}
                       </td>
 
-                      {/* Description (some sentence then...) */}
+                      {/* Description */}
                       <td className="py-4 px-6 max-w-xs md:max-w-md">
                         <p
                           className="text-slate-600 text-xs md:text-sm line-clamp-1 leading-relaxed truncate"
@@ -344,7 +308,7 @@ export default function LeadsPage() {
                         </p>
                       </td>
 
-                      {/* Added On (created at field date) */}
+                      {/* Added On */}
                       <td className="py-4 px-6 text-slate-600 whitespace-nowrap text-xs md:text-sm">
                         {displayDate}
                       </td>
@@ -369,10 +333,9 @@ export default function LeadsPage() {
                         </span>
                       </td>
 
-                      {/* Action: View button matching Event Page + Delete Trash button */}
+                      {/* Action */}
                       <td className="py-4 px-6 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
-                          {/* View Details Eye Icon Button (same as event page) */}
                           <button
                             type="button"
                             onClick={() => handleViewLead(item)}
@@ -388,7 +351,6 @@ export default function LeadsPage() {
                             )}
                           </button>
 
-                          {/* Delete Lead Button */}
                           <button
                             type="button"
                             onClick={() => setDeletingLead(item)}
@@ -408,7 +370,7 @@ export default function LeadsPage() {
           </div>
         )}
 
-        {/* FOOTER: Pagination controls & page size selector matching Image 1 */}
+        {/* FOOTER: Pagination controls & page size selector */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 border-t border-slate-100 text-sm text-slate-500">
           <p>
             Showing {totalItems === 0 ? 0 : startIndex + 1} to{' '}
@@ -418,24 +380,21 @@ export default function LeadsPage() {
           <div className="flex items-center gap-3 self-end sm:self-auto">
             {/* Pagination Controls */}
             <nav aria-label="Leads pagination" className="flex items-center gap-1.5">
-              {/* Previous Button */}
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1 || isFetching}
+                disabled={currentPage <= 1}
                 aria-label="Previous page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >
                 <ChevronLeft className="h-4 w-4 text-slate-600" />
               </button>
 
-              {/* Numbered Page Buttons */}
               {pageNumbers.map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setPage(num)}
-                  disabled={isFetching}
                   className={cn(
                     'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition shadow-xs',
                     currentPage === num
@@ -447,11 +406,10 @@ export default function LeadsPage() {
                 </button>
               ))}
 
-              {/* Next Button */}
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages || isFetching}
+                disabled={currentPage >= totalPages}
                 aria-label="Next page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Users,
   Calendar,
@@ -13,6 +13,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
+import { TableSkeleton } from '@/components/common/Skeleton';
+import { getBroadcasts } from '@/services/broadcast.service';
 import { cn } from '@/lib/utils';
 
 export default function GroupDetailsView({
@@ -26,6 +28,54 @@ export default function GroupDetailsView({
 }) {
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(group?.status !== false);
+  const [broadcasts, setBroadcasts] = useState(
+    Array.isArray(group?.recentBroadcasts) && group.recentBroadcasts.length > 0
+      ? group.recentBroadcasts
+      : []
+  );
+  const [loadingBroadcasts, setLoadingBroadcasts] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!group?.id) return;
+
+    if (Array.isArray(group.recentBroadcasts) && group.recentBroadcasts.length > 0) {
+      setBroadcasts(group.recentBroadcasts);
+    }
+
+    setLoadingBroadcasts(true);
+    getBroadcasts({ groupId: group.id, limit: 20 })
+      .then((res) => {
+        if (!active) return;
+        const list = res?.broadcasts || [];
+        const matched = list.filter((b) => {
+          const bGId = b.group_id?.id ?? b.groupId?.id ?? b.groupId;
+          if (bGId !== undefined && bGId !== null) {
+            return String(bGId) === String(group.id);
+          }
+          const target = (b.sendTo || b.sentTo || '').toLowerCase();
+          return target === group.name?.toLowerCase() || target === group.groupName?.toLowerCase();
+        });
+
+        if (matched.length > 0) {
+          setBroadcasts(matched);
+        } else if (Array.isArray(group.recentBroadcasts) && group.recentBroadcasts.length > 0) {
+          setBroadcasts(group.recentBroadcasts);
+        } else {
+          setBroadcasts([]);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load group broadcasts:', err);
+      })
+      .finally(() => {
+        if (active) setLoadingBroadcasts(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [group?.id, group?.name, group?.recentBroadcasts]);
 
   if (!group) return null;
 
@@ -47,50 +97,6 @@ export default function GroupDetailsView({
   };
 
   const memberCount = group.memberCount || group.members?.length || 25;
-  const broadcasts = Array.isArray(group.recentBroadcasts) && group.recentBroadcasts.length > 0
-    ? group.recentBroadcasts
-    : [
-        {
-          id: 1,
-          title: 'Jewellery Exhibition 2026',
-          message: 'Dear Members, We are excited to announce the upcoming annual exhibition...',
-          sentOn: '15 May 2026, 10:30AM',
-          sentTo: 'All Members',
-          status: 'Delivered',
-        },
-        {
-          id: 2,
-          title: 'Gold Rate Update & Market Meeting',
-          message: 'Dear Members, Please find the weekly market analysis and bullion update...',
-          sentOn: '18 May 2026, 02:15PM',
-          sentTo: 'All Members',
-          status: 'Delivered',
-        },
-        {
-          id: 3,
-          title: 'Safety Guidelines & Security Advisory',
-          message: 'Please review the updated security protocols for all showroom locations...',
-          sentOn: '20 May 2026, 11:45AM',
-          sentTo: 'All Members',
-          status: 'Delivered',
-        },
-        {
-          id: 4,
-          title: 'Festival Season Buying Trends',
-          message: 'Report on customer buying behaviors for the upcoming Diwali festive season...',
-          sentOn: '25 May 2026, 05:30PM',
-          sentTo: 'All Members',
-          status: 'Delivered',
-        },
-        {
-          id: 5,
-          title: 'Hallmarking Certification Notice',
-          message: 'Reminder regarding mandatory BIS hallmarking compliance renewals...',
-          sentOn: '01 June 2026, 09:15AM',
-          sentTo: 'All Members',
-          status: 'Delivered',
-        },
-      ];
 
   return (
     <div className="space-y-6">
@@ -297,42 +303,62 @@ export default function GroupDetailsView({
         </div>
 
         {/* Broadcasts Table matching Image 3 */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left text-xs sm:text-sm">
-            <thead className="bg-[#F8FAFC] text-[11px] sm:text-xs uppercase tracking-wider font-bold text-slate-500 border-b border-slate-100">
-              <tr>
-                <th scope="col" className="px-5 py-3.5 font-bold">Title</th>
-                <th scope="col" className="px-5 py-3.5 font-bold">Message</th>
-                <th scope="col" className="px-5 py-3.5 font-bold">Sent On</th>
-                <th scope="col" className="px-5 py-3.5 font-bold">Sent To</th>
-                <th scope="col" className="px-5 py-3.5 font-bold text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {broadcasts.map((b) => (
-                <tr key={b.id} className="hover:bg-slate-50/50 transition">
-                  <td className="px-5 py-4 font-bold text-ink whitespace-nowrap">
-                    {b.title || b.broadcastTitle}
-                  </td>
-                  <td className="px-5 py-4 text-slate-500 max-w-xs truncate">
-                    {b.message}
-                  </td>
-                  <td className="px-5 py-4 text-slate-500 whitespace-nowrap">
-                    {b.sentOn}
-                  </td>
-                  <td className="px-5 py-4 text-slate-500 whitespace-nowrap">
-                    {b.sendTo || b.sentTo || group.name}
-                  </td>
-                  <td className="px-5 py-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border border-[#A6F4C5] bg-[#D1FADF]/70 text-[#027A48]">
-                      Delivered
-                    </span>
-                  </td>
+        {loadingBroadcasts && broadcasts.length === 0 ? (
+          <div className="p-4 sm:p-6">
+            <TableSkeleton rows={4} cols={5} />
+          </div>
+        ) : broadcasts.length === 0 ? (
+          <div className="py-12 text-center space-y-3">
+            <p className="text-xs sm:text-sm text-slate-400">
+              No broadcast messages sent to this group yet.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onSendBroadcast}
+              className="rounded-full border-[#2832A4] text-[#2832A4] hover:bg-indigo-50/70 text-xs font-semibold px-4 py-2"
+            >
+              Send First Broadcast
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-left text-xs sm:text-sm">
+              <thead className="bg-[#F8FAFC] text-[11px] sm:text-xs uppercase tracking-wider font-bold text-slate-500 border-b border-slate-100">
+                <tr>
+                  <th scope="col" className="px-5 py-3.5 font-bold">Title</th>
+                  <th scope="col" className="px-5 py-3.5 font-bold">Message</th>
+                  <th scope="col" className="px-5 py-3.5 font-bold">Sent On</th>
+                  <th scope="col" className="px-5 py-3.5 font-bold">Sent To</th>
+                  <th scope="col" className="px-5 py-3.5 font-bold text-center">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {broadcasts.map((b) => (
+                  <tr key={b.id} className="hover:bg-slate-50/50 transition">
+                    <td className="px-5 py-4 font-bold text-ink whitespace-nowrap">
+                      {b.title || b.broadcastTitle}
+                    </td>
+                    <td className="px-5 py-4 text-slate-500 max-w-xs truncate">
+                      {b.message}
+                    </td>
+                    <td className="px-5 py-4 text-slate-500 whitespace-nowrap">
+                      {b.sentOn}
+                    </td>
+                    <td className="px-5 py-4 text-slate-500 whitespace-nowrap">
+                      {b.sendTo || b.sentTo || group.name}
+                    </td>
+                    <td className="px-5 py-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border border-[#A6F4C5] bg-[#D1FADF]/70 text-[#027A48]">
+                        Delivered
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

@@ -13,7 +13,7 @@ import {
   Paperclip,
   CheckCircle2,
 } from 'lucide-react';
-import Loader from '@/components/common/Loader';
+import { TableSkeleton } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState';
 import Button from '@/components/common/Button';
 import { cn } from '@/lib/utils';
@@ -89,7 +89,7 @@ export default function BroadcastListView({
           </Button>
 
           {/* + Add Group Button */}
-          {/* <Button
+          <Button
             type="button"
             variant="primary"
             onClick={onAddGroup}
@@ -97,7 +97,7 @@ export default function BroadcastListView({
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>Add Group</span>
-          </Button> */}
+          </Button>
         </div>
       </div>
 
@@ -188,9 +188,9 @@ export default function BroadcastListView({
 
       {/* Broadcasts Table matching Image 3 styling */}
       <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-2xs">
-        {isLoading || isFetching ? (
-          <div className="flex justify-center py-16">
-            <Loader label="Loading broadcasts..." />
+        {isLoading && displayedBroadcasts.length === 0 ? (
+          <div className="p-4 sm:p-6">
+            <TableSkeleton rows={6} cols={6} />
           </div>
         ) : displayedBroadcasts.length === 0 ? (
           <div className="py-12">
@@ -246,7 +246,7 @@ export default function BroadcastListView({
                   </td>
                   <td className="px-5 py-4 text-center whitespace-nowrap">
                     <div className="flex items-center justify-center gap-2">
-                      {/* View Details Button matching other modules */}
+                      {/* View Details Icon Button matching other modules */}
                       <button
                         type="button"
                         onClick={() => onViewBroadcast(b)}
@@ -257,7 +257,7 @@ export default function BroadcastListView({
                         <Eye className="h-4 w-4 stroke-[2]" />
                       </button>
 
-                      {/* Delete Broadcast Button matching other modules */}
+                      {/* Delete Broadcast Icon Button matching other modules */}
                       <button
                         type="button"
                         onClick={() => onDeleteBroadcast(b)}

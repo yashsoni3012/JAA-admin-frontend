@@ -27,6 +27,8 @@ export default function Avatar({ name = '', src, size = 'md', className }) {
       <img
         src={src}
         alt={name}
+        loading="lazy"
+        decoding="async"
         onError={() => setHasError(true)}
         className={cn('rounded-full object-cover', sizes[size], className)}
       />

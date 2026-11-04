@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   SlidersHorizontal,
@@ -11,7 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import Avatar from '@/components/common/Avatar';
-import Loader from '@/components/common/Loader';
+import { TableSkeleton } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState';
 import ComplaintDetailsView from '@/components/complaints/ComplaintDetailsView';
 import {
@@ -26,21 +27,7 @@ import { cn } from '@/lib/utils';
 const PAGE_SIZES = [5, 10, 20, 50];
 
 export default function ComplaintsPage() {
-  const [complaints, setComplaints] = useState([]);
-  const [summary, setSummary] = useState({
-    totalComplaints: 0,
-    againstMember: 0,
-    againstOther: 0,
-  });
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -68,52 +55,54 @@ export default function ComplaintsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Load complaints from backend API
-  const loadComplaints = useCallback(
-    async (
-      targetPage = 1,
-      targetSize = 10,
-      targetSearch = '',
-      targetStatus = 'ALL',
-      targetPriority = 'ALL',
-      targetTab = 'ALL'
-    ) => {
-      setIsFetching(true);
-      try {
-        const againstParam =
-          targetTab === 'MEMBER'
-            ? 'Member'
-            : targetTab === 'OTHER'
-            ? 'Other'
-            : '';
+  const againstParam =
+    activeTab === 'MEMBER'
+      ? 'Member'
+      : activeTab === 'OTHER'
+      ? 'Other'
+      : '';
 
-        const res = await getComplaints({
-          page: targetPage,
-          limit: targetSize,
-          search: targetSearch,
-          status: targetStatus !== 'ALL' ? targetStatus : '',
-          priority: targetPriority !== 'ALL' ? targetPriority : '',
-          complaintAgainst: againstParam,
-        });
+  // TanStack Query caching
+  const {
+    data: complaintData,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: [
+      'complaints',
+      {
+        page,
+        pageSize,
+        debouncedSearch,
+        statusFilter,
+        priorityFilter,
+        activeTab,
+      },
+    ],
+    queryFn: () =>
+      getComplaints({
+        page,
+        limit: pageSize,
+        search: debouncedSearch,
+        status: statusFilter !== 'ALL' ? statusFilter : '',
+        priority: priorityFilter !== 'ALL' ? priorityFilter : '',
+        complaintAgainst: againstParam,
+      }),
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+  });
 
-        setComplaints(res.complaints || []);
-        if (res.summary) setSummary(res.summary);
-        if (res.pagination) {
-          setPagination(res.pagination);
-        }
-      } catch (err) {
-        console.error('Failed to load complaints:', err);
-      } finally {
-        setIsLoading(false);
-        setIsFetching(false);
-      }
-    },
-    []
-  );
+  const complaints = complaintData?.complaints || [];
+  const summary = complaintData?.summary || {
+    totalComplaints: 0,
+    againstMember: 0,
+    againstOther: 0,
+  };
+  const pagination = complaintData?.pagination || {};
 
-  useEffect(() => {
-    loadComplaints(page, pageSize, debouncedSearch, statusFilter, priorityFilter, activeTab);
-  }, [loadComplaints, page, pageSize, debouncedSearch, statusFilter, priorityFilter, activeTab]);
+  const invalidateComplaints = () => {
+    queryClient.invalidateQueries({ queryKey: ['complaints'] });
+  };
 
   // Handle clicking "View" button -> calls GET /api/admin/complaints/:id
   const handleViewComplaint = async (complaintItem) => {
@@ -146,7 +135,7 @@ export default function ComplaintsPage() {
   // Pagination calculation based on backend pagination
   const totalItems = pagination.total || complaints.length;
   const totalPages = pagination.totalPages || Math.max(1, Math.ceil(totalItems / pageSize));
-  const currentPage = Math.min(page, totalPages);
+  const currentPage = Math.min(Math.max(1, page), totalPages);
   const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + complaints.length, totalItems);
 
@@ -234,7 +223,7 @@ export default function ComplaintsPage() {
         onBack={() => setSelectedComplaint(null)}
         onStatusUpdated={(updated) => {
           setSelectedComplaint(updated);
-          loadComplaints(page, pageSize, debouncedSearch, statusFilter, priorityFilter);
+          invalidateComplaints();
         }}
       />
     );
@@ -414,9 +403,7 @@ export default function ComplaintsPage() {
 
         {/* TABLE LIST matching Image 1 */}
         {isLoading && complaints.length === 0 ? (
-          <div className="flex justify-center py-20">
-            <Loader label="Loading complaints..." />
-          </div>
+          <TableSkeleton rows={6} cols={6} />
         ) : complaints.length === 0 ? (
           <div className="py-12">
             <EmptyState
@@ -435,7 +422,6 @@ export default function ComplaintsPage() {
                   <th className="py-3.5 px-4">COMPLAINT TYPE</th>
                   <th className="py-3.5 px-4">PRIORITY</th>
                   <th className="py-3.5 px-4">STATUS</th>
-                  {/* <th className="py-3.5 px-4">DATE & TIME</th> */}
                   <th className="py-3.5 pr-6 pl-4 text-center rounded-r-2xl">ACTIONS</th>
                 </tr>
               </thead>
@@ -448,71 +434,59 @@ export default function ComplaintsPage() {
                   const isComplainantMember = isMemberEntity(item.complaintBy);
                   const complainantName = item.complaintBy?.name || 'Complainant';
                   const businessName = item.complaintBy?.business || 'Jewellers';
-                  const membershipId = isComplainantMember ? item.complaintBy?.membershipId : null;
-                  const avatarUrl = getMediaUrl(item.complaintBy?.avatar);
 
                   return (
                     <tr
                       key={itemId}
-                      className="hover:bg-slate-50/60 transition-colors group"
+                      className="hover:bg-slate-50/70 transition-colors group"
                     >
-                      {/* 1. Complaints ID */}
-                      <td className="py-4 pl-6 pr-4 font-bold text-ink whitespace-nowrap">
+                      {/* COMPLAINTS ID */}
+                      <td className="py-4 pl-6 pr-4 font-bold text-slate-900 whitespace-nowrap">
                         {code}
                       </td>
 
-                      {/* 2. Complaint By (Avatar + Name + Business) */}
+                      {/* COMPLAINT BY */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <Avatar
                             name={complainantName}
-                            src={avatarUrl}
-                            size="md"
-                            className="h-10 w-10 shrink-0 shadow-xs"
+                            src={getMediaUrl(item.complaintBy?.avatar)}
+                            size="sm"
                           />
-                          <div className="min-w-0">
-                            <p className="font-bold text-ink truncate text-sm">
+                          <div>
+                            <div className="font-semibold text-ink line-clamp-1">
                               {complainantName}
-                            </p>
-                            <p className="text-xs text-slate-400 truncate">
-                              {businessName}
-                              {membershipId ? ` • ${membershipId}` : ''}
-                            </p>
+                            </div>
+                            <div className="text-xs text-slate-400 line-clamp-1">
+                              {isComplainantMember ? businessName : 'Other Entity'}
+                            </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* 3. Complaint Type */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-medium bg-[#EEF2FF] text-[#2832A4] border border-[#D4DEFE]">
-                          {item.complaintType || 'Payment Dispute'}
-                        </span>
+                      {/* COMPLAINT TYPE */}
+                      <td className="py-4 px-4 text-slate-700 font-medium">
+                        {item.complaintType || 'General Issue'}
                       </td>
 
-                      {/* 4. Priority */}
+                      {/* PRIORITY */}
                       <td className="py-4 px-4 whitespace-nowrap">
-                        {renderPriorityBadge(item.priority || item.complaintDetails?.priority)}
+                        {renderPriorityBadge(item.priority)}
                       </td>
 
-                      {/* 5. Status */}
+                      {/* STATUS */}
                       <td className="py-4 px-4 whitespace-nowrap">
                         {renderStatusBadge(item.status)}
                       </td>
 
-                      {/* 6. Date & Time */}
-                      {/* <td className="py-4 px-4 whitespace-nowrap text-xs text-slate-600 font-medium">
-                        {item.createdAt || item.updatedAt || '-'}
-                      </td> */}
-
-                      {/* 7. Actions: Eye Icon Button matching Event page */}
+                      {/* ACTIONS */}
                       <td className="py-4 pr-6 pl-4 text-center whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => handleViewComplaint(item)}
-                          disabled={isLoadingDetail}
                           title="View Details"
                           aria-label="View Details"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 disabled:opacity-50"
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 mx-auto cursor-pointer"
                         >
                           <Eye className="h-4 w-4 stroke-[2]" />
                         </button>
@@ -534,24 +508,21 @@ export default function ComplaintsPage() {
           <div className="flex items-center gap-3 self-end sm:self-auto">
             {/* Pagination Button Group */}
             <nav aria-label="Complaints pagination" className="flex items-center gap-1.5">
-              {/* Prev Button */}
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1 || isFetching}
+                disabled={currentPage <= 1}
                 aria-label="Previous page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >
                 <ChevronLeft className="h-4 w-4 text-slate-600" />
               </button>
 
-              {/* Numbered Page Buttons */}
               {pageNumbers.map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setPage(num)}
-                  disabled={isFetching}
                   className={cn(
                     'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition shadow-xs',
                     currentPage === num
@@ -563,11 +534,10 @@ export default function ComplaintsPage() {
                 </button>
               ))}
 
-              {/* Next Button */}
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages || isFetching}
+                disabled={currentPage >= totalPages}
                 aria-label="Next page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >
@@ -598,4 +568,3 @@ export default function ComplaintsPage() {
     </div>
   );
 }
-

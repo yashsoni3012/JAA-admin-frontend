@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 import { getMembers, createMember, updateMemberStatus, updateMember, deleteMember } from '@/services/admin.service';
 import Button from '@/components/common/Button';
-import Loader from '@/components/common/Loader';
+import { TableSkeleton } from '@/components/common/Skeleton';
 import { cn } from '@/lib/utils';
 
 // Lazy-loaded components for optimal performance and chunk splitting
@@ -28,37 +29,37 @@ const MemberRow = dynamic(() => import('@/components/admin/MemberRow'), {
 
 const AddMemberModal = dynamic(() => import('@/components/admin/AddMemberModal'), {
   ssr: false,
-  loading: () => <Loader label="Loading form..." />,
+  loading: () => null,
 });
 
 const EditMemberModal = dynamic(() => import('@/components/admin/EditMemberModal'), {
   ssr: false,
-  loading: () => <Loader label="Loading editor..." />,
+  loading: () => null,
 });
 
 const ViewMemberModal = dynamic(() => import('@/components/admin/ViewMemberModal'), {
   ssr: false,
-  loading: () => <Loader label="Loading member details..." />,
+  loading: () => null,
 });
 
 const RejectMemberModal = dynamic(() => import('@/components/admin/RejectMemberModal'), {
   ssr: false,
-  loading: () => <Loader label="Loading..." />,
+  loading: () => null,
 });
 
 const MemberIdCardModal = dynamic(() => import('@/components/members/MemberIdCardModal'), {
   ssr: false,
-  loading: () => <Loader label="Loading ID Card..." />,
+  loading: () => null,
 });
 
 const ImportMembersModal = dynamic(() => import('@/components/admin/ImportMembersModal'), {
   ssr: false,
-  loading: () => <Loader label="Loading import tool..." />,
+  loading: () => null,
 });
 
 const DeleteMemberModal = dynamic(() => import('@/components/admin/DeleteMemberModal'), {
   ssr: false,
-  loading: () => <Loader label="Loading..." />,
+  loading: () => null,
 });
 
 const EmptyState = dynamic(() => import('@/components/common/EmptyState'), {
@@ -69,29 +70,7 @@ const TABS = ['All', 'Pending', 'Approved', 'Rejected'];
 const PAGE_SIZES = [10, 20, 50];
 
 export default function MembersPage() {
-  const [members, setMembers] = useState([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    total_items: 0,
-    page: 1,
-    current_page: 1,
-    limit: 20,
-    item_per_page: 20,
-    totalPages: 1,
-    total_page: 1,
-    hasNext: false,
-    has_more: false,
-    hasPrev: false,
-    has_prev: false,
-  });
-  const [counts, setCounts] = useState({
-    all: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('All');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -110,100 +89,72 @@ export default function MembersPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setPage(1);
     }, 350);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Load server-side paginated members from backend API
-  const loadMembers = useCallback(async (targetPage = 1, targetSize = 20, targetTab = 'All', targetSearch = '') => {
-    setIsFetching(true);
-    try {
-      const data = await getMembers({
-        page: targetPage,
-        limit: targetSize,
-        status: targetTab,
-        search: targetSearch,
-      });
+  // TanStack Query caching for instant page loads and background synchronization
+  const {
+    data: memberData,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: ['members', { page, pageSize, activeTab, debouncedSearch }],
+    queryFn: () =>
+      getMembers({
+        page,
+        limit: pageSize,
+        status: activeTab,
+        search: debouncedSearch,
+      }),
+    placeholderData: (previousData) => previousData,
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+  });
 
-      const list = data.members || (Array.isArray(data) ? data : []);
-      setMembers(list);
+  const members = memberData?.members || (Array.isArray(memberData) ? memberData : []);
+  const rawPagination = memberData?.pagination || {};
+  const counts = memberData?.counts || { all: 0, pending: 0, approved: 0, rejected: 0 };
 
-      const rawPagination = data.pagination || {};
-      const totalItems =
-        rawPagination.total_items !== undefined
-          ? rawPagination.total_items
-          : rawPagination.total !== undefined
-          ? rawPagination.total
-          : data.total !== undefined
-          ? data.total
-          : list.length;
+  const totalItems =
+    rawPagination.total_items !== undefined
+      ? rawPagination.total_items
+      : rawPagination.total !== undefined
+      ? rawPagination.total
+      : memberData?.total !== undefined
+      ? memberData.total
+      : members.length;
 
-      const totalPages =
-        rawPagination.total_page !== undefined
-          ? rawPagination.total_page
-          : rawPagination.totalPages !== undefined
-          ? rawPagination.totalPages
-          : Math.max(1, Math.ceil(totalItems / targetSize));
+  const totalPages =
+    rawPagination.total_page !== undefined
+      ? rawPagination.total_page
+      : rawPagination.totalPages !== undefined
+      ? rawPagination.totalPages
+      : Math.max(1, Math.ceil(totalItems / pageSize));
 
-      const currentPage =
-        rawPagination.current_page !== undefined
-          ? rawPagination.current_page
-          : rawPagination.page !== undefined
-          ? rawPagination.page
-          : targetPage;
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + members.length, totalItems);
 
-      const itemPerPage =
-        rawPagination.item_per_page !== undefined
-          ? rawPagination.item_per_page
-          : rawPagination.limit !== undefined
-          ? rawPagination.limit
-          : targetSize;
+  // Dynamic window of up to 5 page numbers (e.g. 1 2 3 4 5)
+  const maxButtons = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+  let endPage = startPage + maxButtons - 1;
+  if (endPage > totalPages) {
+    endPage = totalPages;
+    startPage = Math.max(1, endPage - maxButtons + 1);
+  }
+  const pageNumbers = Array.from(
+    { length: Math.max(1, endPage - startPage + 1) },
+    (_, i) => startPage + i
+  );
 
-      const hasNext = Boolean(
-        rawPagination.has_more !== undefined
-          ? rawPagination.has_more
-          : rawPagination.hasNext !== undefined
-          ? rawPagination.hasNext
-          : currentPage < totalPages
-      );
-
-      const hasPrev = Boolean(
-        rawPagination.has_prev !== undefined
-          ? rawPagination.has_prev
-          : rawPagination.hasPrev !== undefined
-          ? rawPagination.hasPrev
-          : currentPage > 1
-      );
-
-      setPagination({
-        total: totalItems,
-        total_items: totalItems,
-        page: currentPage,
-        current_page: currentPage,
-        limit: itemPerPage,
-        item_per_page: itemPerPage,
-        totalPages,
-        total_page: totalPages,
-        hasNext,
-        hasPrev,
-        has_more: hasNext,
-      });
-
-      if (data.counts) {
-        setCounts(data.counts);
-      }
-    } catch (err) {
-      console.warn('Failed to load members from API:', err.message);
-    } finally {
-      setIsLoading(false);
-      setIsFetching(false);
-    }
-  }, []);
-
-  // Fetch from server whenever page, pageSize, activeTab, or debouncedSearch changes
-  useEffect(() => {
-    loadMembers(page, pageSize, activeTab, debouncedSearch);
-  }, [loadMembers, page, pageSize, activeTab, debouncedSearch]);
+  const invalidateMemberData = () => {
+    queryClient.invalidateQueries({ queryKey: ['members'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['committee'] });
+    queryClient.invalidateQueries({ queryKey: ['committee-members-directory'] });
+  };
 
   // Count shown in each tab label, e.g. "Pending(5)"
   const countFor = (tab) => {
@@ -239,32 +190,12 @@ export default function MembersPage() {
     setPage(1);
   };
 
-  // Pagination calculation
-  const totalItems = pagination.total_items ?? pagination.total ?? 0;
-  const totalPages = Math.max(1, pagination.total_page ?? pagination.totalPages ?? Math.ceil(totalItems / pageSize));
-  const currentPage = Math.min(Math.max(1, page), totalPages);
-  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + members.length, totalItems);
-
-  // Dynamic window of up to 5 page numbers (e.g. 1 2 3 4 5)
-  const maxButtons = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-  let endPage = startPage + maxButtons - 1;
-  if (endPage > totalPages) {
-    endPage = totalPages;
-    startPage = Math.max(1, endPage - maxButtons + 1);
-  }
-  const pageNumbers = Array.from(
-    { length: Math.max(1, endPage - startPage + 1) },
-    (_, i) => startPage + i
-  );
-
   const handleAddMember = async (newMemberData) => {
     try {
       const created = await createMember(newMemberData);
       setToast(`Member "${created.name}" has been added successfully!`);
       setTimeout(() => setToast(null), 4500);
-      loadMembers(page, pageSize, activeTab, debouncedSearch);
+      invalidateMemberData();
     } catch (err) {
       console.error('Error creating member:', err);
       setToast(err.message || 'Failed to add member');
@@ -278,7 +209,7 @@ export default function MembersPage() {
       await updateMemberStatus(member.id, 'approved');
       setToast(`Member "${member.name}" has been approved!`);
       setTimeout(() => setToast(null), 4500);
-      loadMembers(page, pageSize, activeTab, debouncedSearch);
+      invalidateMemberData();
     } catch (err) {
       console.error('Error approving member:', err);
       setToast(err.message || 'Failed to approve member');
@@ -291,7 +222,7 @@ export default function MembersPage() {
       await updateMemberStatus(member.id, 'rejected', reason);
       setToast(`Member "${member.name}" has been rejected.`);
       setTimeout(() => setToast(null), 4500);
-      loadMembers(page, pageSize, activeTab, debouncedSearch);
+      invalidateMemberData();
     } catch (err) {
       console.error('Error rejecting member:', err);
       setToast(err.message || 'Failed to reject member');
@@ -300,15 +231,12 @@ export default function MembersPage() {
   };
 
   const handleMemberUpdated = (updatedMember) => {
-    setMembers((prev) =>
-      prev.map((m) => (m.id === updatedMember.id ? { ...m, ...updatedMember } : m))
-    );
     if (selected && selected.id === updatedMember.id) {
       setSelected((prev) => ({ ...prev, ...updatedMember }));
     }
     setToast(`Member "${updatedMember.name}" updated successfully.`);
     setTimeout(() => setToast(null), 4500);
-    loadMembers(page, pageSize, activeTab, debouncedSearch);
+    invalidateMemberData();
   };
 
   const handleDeleteMember = async (memberId) => {
@@ -317,7 +245,7 @@ export default function MembersPage() {
       setToast('Member deleted successfully.');
       setTimeout(() => setToast(null), 4500);
       setDeletingMember(null);
-      loadMembers(page, pageSize, activeTab, debouncedSearch);
+      invalidateMemberData();
     } catch (err) {
       console.error('Error deleting member:', err);
       setToast(err.message || 'Failed to delete member');
@@ -325,8 +253,6 @@ export default function MembersPage() {
       throw err;
     }
   };
-
-
 
   return (
     <section className="rounded-2xl border border-white bg-white shadow-card sm:rounded-3xl overflow-hidden">
@@ -424,9 +350,9 @@ export default function MembersPage() {
         </div>
 
         {/* Member list (Card view on mobile, structured row on tablet & desktop) */}
-        {(isFetching || (isLoading && members.length === 0)) ? (
-          <div className="flex justify-center py-16">
-            <Loader label="Loading members..." />
+        {isLoading && members.length === 0 ? (
+          <div className="p-4 sm:p-6">
+            <TableSkeleton rows={8} cols={4} />
           </div>
         ) : members.length === 0 ? (
           <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">Loading...</div>}>
@@ -475,7 +401,7 @@ export default function MembersPage() {
             <button
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1 || isFetching}
+              disabled={currentPage <= 1}
               aria-label="Previous page"
               className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-2xs"
             >
@@ -486,7 +412,6 @@ export default function MembersPage() {
                 key={num}
                 type="button"
                 onClick={() => setPage(num)}
-                disabled={isFetching}
                 aria-current={num === currentPage ? 'page' : undefined}
                 className={cn(
                   'flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border text-xs sm:text-sm font-semibold transition shadow-2xs',
@@ -501,7 +426,7 @@ export default function MembersPage() {
             <button
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages || isFetching}
+              disabled={currentPage >= totalPages}
               aria-label="Next page"
               className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-2xs"
             >
@@ -531,7 +456,7 @@ export default function MembersPage() {
       </div>
 
       {/* View Member details dialog */}
-      <Suspense fallback={<Loader label="Loading member details..." />}>
+      <Suspense fallback={null}>
         {selected && (
           <ViewMemberModal
             open={Boolean(selected)}
@@ -544,7 +469,7 @@ export default function MembersPage() {
       </Suspense>
 
       {/* Member ID Card dialog */}
-      <Suspense fallback={<Loader label="Loading ID Card..." />}>
+      <Suspense fallback={null}>
         {idCardMember && (
           <MemberIdCardModal
             open={Boolean(idCardMember)}
@@ -555,7 +480,7 @@ export default function MembersPage() {
       </Suspense>
 
       {/* Edit Member dialog */}
-      <Suspense fallback={<Loader label="Loading editor..." />}>
+      <Suspense fallback={null}>
         {editingMember && (
           <EditMemberModal
             open={Boolean(editingMember)}
@@ -567,7 +492,7 @@ export default function MembersPage() {
       </Suspense>
 
       {/* Reject Member dialog */}
-      <Suspense fallback={<Loader label="Loading..." />}>
+      <Suspense fallback={null}>
         {rejectingMember && (
           <RejectMemberModal
             open={Boolean(rejectingMember)}
@@ -579,7 +504,7 @@ export default function MembersPage() {
       </Suspense>
 
       {/* Delete Member dialog */}
-      <Suspense fallback={<Loader label="Loading..." />}>
+      <Suspense fallback={null}>
         {deletingMember && (
           <DeleteMemberModal
             open={Boolean(deletingMember)}
@@ -591,7 +516,7 @@ export default function MembersPage() {
       </Suspense>
 
       {/* Add Member dialog */}
-      <Suspense fallback={<Loader label="Loading form..." />}>
+      <Suspense fallback={null}>
         {isAddOpen && (
           <AddMemberModal
             open={isAddOpen}
@@ -602,14 +527,14 @@ export default function MembersPage() {
       </Suspense>
 
       {/* Import Members dialog */}
-      <Suspense fallback={<Loader label="Loading import tool..." />}>
+      <Suspense fallback={null}>
         {isImportOpen && (
           <ImportMembersModal
             open={isImportOpen}
             members={members}
             onClose={() => setIsImportOpen(false)}
             onImportSuccess={() => {
-              loadMembers(page, pageSize, activeTab, debouncedSearch);
+              invalidateMemberData();
             }}
           />
         )}

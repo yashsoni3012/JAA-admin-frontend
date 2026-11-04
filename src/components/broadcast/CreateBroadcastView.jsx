@@ -119,22 +119,10 @@ export default function CreateBroadcastView({
   return (
     <section className="rounded-3xl border border-white bg-white p-6 sm:p-8 md:p-10 shadow-card space-y-6">
       {/* Top Header Row matching screenshot */}
-      <div className="flex items-center justify-between gap-4">
+      <div>
         <h2 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
           Create Broadcast
         </h2>
-
-        {onBack && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onBack}
-            className="border-slate-300 hover:border-[#2832A4] text-slate-700 hover:text-[#2832A4] hover:bg-indigo-50/50 px-5 sm:px-6 py-2 text-xs sm:text-sm active:scale-95 shadow-2xs gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Broadcasts</span>
-          </Button>
-        )}
       </div>
 
       {/* Main Broadcast Form matching media_1793701439985_1579f5f1.jpg */}
@@ -322,7 +310,7 @@ export default function CreateBroadcastView({
             variant="ghost"
             onClick={handleCancel}
             disabled={isSubmitting}
-            className="border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-7 sm:px-8 py-2.5 sm:py-3 text-xs sm:text-sm active:scale-95 shadow-2xs"
+            className="rounded-full border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-8 py-2.5 text-xs sm:text-sm font-medium active:scale-95 shadow-2xs"
           >
             Cancel
           </Button>
@@ -333,7 +321,7 @@ export default function CreateBroadcastView({
             variant="outline"
             loading={isSubmitting}
             disabled={isSubmitting}
-            className="border-[#2832A4] hover:bg-indigo-50/70 bg-white text-[#2832A4] px-6 sm:px-8 py-2.5 sm:py-3 text-xs sm:text-sm active:scale-95 shadow-2xs gap-2"
+            className="rounded-full border-[#2832A4] hover:bg-indigo-50/70 bg-white text-[#2832A4] px-8 py-2.5 text-xs sm:text-sm font-medium active:scale-95 shadow-2xs gap-2"
           >
             <Send className="h-4 w-4 -rotate-12" />
             <span>Send to Broadcast</span>

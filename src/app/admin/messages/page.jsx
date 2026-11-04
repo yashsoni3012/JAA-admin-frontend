@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, X } from 'lucide-react';
 import BroadcastListView from '@/components/broadcast/BroadcastListView';
 import CreateBroadcastView from '@/components/broadcast/CreateBroadcastView';
@@ -21,6 +22,7 @@ import {
 } from '@/services/broadcast.service';
 import {
   getGroups,
+  getGroupById,
   createGroup,
   updateGroup,
   toggleGroupStatus,
@@ -38,10 +40,8 @@ export default function MessagesPage() {
 function MessagesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  // Read tab directly and reactively from URL:
-  // /admin/messages?tab=group -> GROUP_MESSAGE (Image 1: Groups List)
-  // /admin/messages or /admin/messages?tab=broadcast -> BROADCAST (Broadcast List)
   const tab = searchParams.get('tab');
   const isGroupTab = tab === 'group' || tab === 'groups' || tab === 'group_message';
   const activeModule = isGroupTab ? 'GROUP_MESSAGE' : 'BROADCAST';
@@ -49,28 +49,17 @@ function MessagesContent() {
   // ==========================================
   // 1. BROADCAST MODULE STATE
   // ==========================================
-  const [broadcasts, setBroadcasts] = useState([]);
-  const [broadcastPagination, setBroadcastPagination] = useState({
-    total: 0,
-    total_items: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
-  const [isBroadcastLoading, setIsBroadcastLoading] = useState(true);
-  const [isBroadcastFetching, setIsBroadcastFetching] = useState(false);
   const [broadcastSearch, setBroadcastSearch] = useState('');
   const [debouncedBroadcastSearch, setDebouncedBroadcastSearch] = useState('');
   const [broadcastPage, setBroadcastPage] = useState(1);
   const [broadcastPageSize, setBroadcastPageSize] = useState(10);
 
-  // Broadcast Sub-View: 'LIST' | 'CREATE' (Matches user request for full page create view instead of modal)
+  // Broadcast Sub-View: 'LIST' | 'CREATE'
   const actionParam = searchParams.get('action');
   const [broadcastView, setBroadcastView] = useState(
     actionParam === 'create' ? 'CREATE' : 'LIST'
   );
 
-  // Sync action query param to broadcast view if present
   useEffect(() => {
     if (actionParam === 'create') {
       setBroadcastView('CREATE');
@@ -86,16 +75,6 @@ function MessagesContent() {
   // ==========================================
   const [groupView, setGroupView] = useState('LIST'); // 'LIST' | 'CREATE' | 'DETAILS'
   const [selectedGroup, setSelectedGroup] = useState(null);
-  const [groups, setGroups] = useState([]);
-  const [groupPagination, setGroupPagination] = useState({
-    total: 0,
-    total_items: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
-  const [isGroupLoading, setIsGroupLoading] = useState(true);
-  const [isGroupFetching, setIsGroupFetching] = useState(false);
   const [groupSearch, setGroupSearch] = useState('');
   const [debouncedGroupSearch, setDebouncedGroupSearch] = useState('');
   const [groupPage, setGroupPage] = useState(1);
@@ -128,70 +107,53 @@ function MessagesContent() {
     return () => clearTimeout(timer);
   }, [groupSearch]);
 
-  // Load Broadcasts from API / Service
-  const loadBroadcasts = useCallback(
-    async (targetPage = 1, targetSize = 10, targetSearch = '') => {
-      setIsBroadcastFetching(true);
-      try {
-        const res = await getBroadcasts({
-          page: targetPage,
-          limit: targetSize,
-          search: targetSearch,
-        });
-        setBroadcasts(res.broadcasts || []);
-        setBroadcastPagination(res.pagination || {});
-      } catch (err) {
-        console.warn('Failed to load broadcasts:', err.message);
-      } finally {
-        setIsBroadcastLoading(false);
-        setIsBroadcastFetching(false);
-      }
-    },
-    []
-  );
+  // TanStack Query for Broadcasts
+  const {
+    data: broadcastData,
+    isLoading: isBroadcastLoading,
+    isFetching: isBroadcastFetching,
+  } = useQuery({
+    queryKey: [
+      'broadcasts',
+      { page: broadcastPage, limit: broadcastPageSize, search: debouncedBroadcastSearch },
+    ],
+    queryFn: () =>
+      getBroadcasts({
+        page: broadcastPage,
+        limit: broadcastPageSize,
+        search: debouncedBroadcastSearch,
+      }),
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 60 * 3,
+  });
 
-  // Load Groups from API / Service
-  const loadGroups = useCallback(
-    async (targetPage = 1, targetSize = 10, targetSearch = '') => {
-      setIsGroupFetching(true);
-      try {
-        const res = await getGroups({
-          page: targetPage,
-          limit: targetSize,
-          search: targetSearch,
-        });
-        setGroups(res.groups || []);
-        setGroupPagination(res.pagination || {});
-      } catch (err) {
-        console.warn('Failed to load groups:', err.message);
-      } finally {
-        setIsGroupLoading(false);
-        setIsGroupFetching(false);
-      }
-    },
-    []
-  );
+  const broadcasts = broadcastData?.broadcasts || [];
+  const broadcastPagination = broadcastData?.pagination || {};
 
-  // Load data based on active module
-  useEffect(() => {
-    if (activeModule === 'BROADCAST') {
-      loadBroadcasts(broadcastPage, broadcastPageSize, debouncedBroadcastSearch);
-    } else {
-      loadGroups(groupPage, groupPageSize, debouncedGroupSearch);
-    }
-  }, [
-    activeModule,
-    loadBroadcasts,
-    broadcastPage,
-    broadcastPageSize,
-    debouncedBroadcastSearch,
-    loadGroups,
-    groupPage,
-    groupPageSize,
-    debouncedGroupSearch,
-  ]);
+  // TanStack Query for Groups
+  const {
+    data: groupData,
+    isLoading: isGroupLoading,
+    isFetching: isGroupFetching,
+  } = useQuery({
+    queryKey: [
+      'groups',
+      { page: groupPage, limit: groupPageSize, search: debouncedGroupSearch },
+    ],
+    queryFn: () =>
+      getGroups({
+        page: groupPage,
+        limit: groupPageSize,
+        search: debouncedGroupSearch,
+      }),
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 60 * 3,
+  });
 
-  // Synchronize Top Header Title (Messages, Groups, Group Details)
+  const groups = groupData?.groups || [];
+  const groupPagination = groupData?.pagination || {};
+
+  // Synchronize Top Header Title
   useEffect(() => {
     let title = 'Messages';
     if (activeModule === 'GROUP_MESSAGE') {
@@ -222,21 +184,29 @@ function MessagesContent() {
     };
   }, [activeModule, groupView]);
 
+  const invalidateBroadcasts = () => {
+    queryClient.invalidateQueries({ queryKey: ['broadcasts'] });
+  };
+
+  const invalidateGroups = () => {
+    queryClient.invalidateQueries({ queryKey: ['groups'] });
+  };
+
   // Handle Broadcast Created
   const handleBroadcastCreated = (created, message) => {
-    setBroadcasts((prev) => [created, ...prev]);
     setToast(message || 'Broadcast created successfully!');
     setTimeout(() => setToast(null), 4500);
+    invalidateBroadcasts();
   };
 
   // Handle Broadcast Deleted
   const handleDeleteBroadcast = async (broadcastId) => {
     try {
       await deleteBroadcast(broadcastId);
-      setBroadcasts((prev) => prev.filter((b) => b.id !== broadcastId));
       setToast('Broadcast deleted successfully.');
       setTimeout(() => setToast(null), 4000);
       setDeletingBroadcast(null);
+      invalidateBroadcasts();
     } catch (err) {
       setToast(err.message || 'Failed to delete broadcast');
       setTimeout(() => setToast(null), 4000);
@@ -251,7 +221,7 @@ function MessagesContent() {
       setToast(`Group "${created.name}" created successfully!`);
       setTimeout(() => setToast(null), 4500);
       setGroupView('LIST');
-      loadGroups(1, groupPageSize, debouncedGroupSearch);
+      invalidateGroups();
     } catch (err) {
       throw err;
     }
@@ -262,15 +232,13 @@ function MessagesContent() {
     if (!editingGroup) return;
     try {
       const updated = await updateGroup(editingGroup.id, updates);
-      setGroups((prev) =>
-        prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g))
-      );
       if (selectedGroup && selectedGroup.id === updated.id) {
         setSelectedGroup(updated);
       }
       setToast(`Group "${updated.name}" updated successfully.`);
       setTimeout(() => setToast(null), 4500);
       setEditingGroup(null);
+      invalidateGroups();
     } catch (err) {
       throw err;
     }
@@ -280,14 +248,12 @@ function MessagesContent() {
   const handleToggleStatus = async (groupId) => {
     try {
       const updated = await toggleGroupStatus(groupId);
-      setGroups((prev) =>
-        prev.map((g) => (g.id === updated.id ? { ...g, status: updated.status } : g))
-      );
       if (selectedGroup && selectedGroup.id === updated.id) {
         setSelectedGroup((prev) => ({ ...prev, status: updated.status }));
       }
       setToast(`Group status updated to ${updated.status ? 'Active' : 'Inactive'}.`);
       setTimeout(() => setToast(null), 4000);
+      invalidateGroups();
     } catch (err) {
       setToast(err.message || 'Failed to update status');
       setTimeout(() => setToast(null), 4000);
@@ -299,7 +265,6 @@ function MessagesContent() {
   const handleDeleteGroup = async (groupId) => {
     try {
       await deleteGroup(groupId);
-      setGroups((prev) => prev.filter((g) => g.id !== groupId));
       if (selectedGroup && selectedGroup.id === groupId) {
         setSelectedGroup(null);
         setGroupView('LIST');
@@ -307,7 +272,7 @@ function MessagesContent() {
       setToast('Group deleted successfully.');
       setTimeout(() => setToast(null), 4500);
       setDeletingGroup(null);
-      loadGroups(groupPage, groupPageSize, debouncedGroupSearch);
+      invalidateGroups();
     } catch (err) {
       setToast(err.message || 'Failed to delete group');
       setTimeout(() => setToast(null), 4500);
@@ -336,19 +301,21 @@ function MessagesContent() {
         });
       }
 
-      const updatedRecent = [createdBroadcast, ...(broadcastToGroup.recentBroadcasts || []).filter(b => b.id !== createdBroadcast.id)];
-      setGroups((prev) =>
-        prev.map((g) =>
-          g.id === broadcastToGroup.id ? { ...g, recentBroadcasts: updatedRecent } : g
-        )
-      );
+      const updatedRecent = [
+        createdBroadcast,
+        ...(broadcastToGroup.recentBroadcasts || []).filter(
+          (b) => b.id !== createdBroadcast.id
+        ),
+      ];
+
       if (selectedGroup && selectedGroup.id === broadcastToGroup.id) {
         setSelectedGroup((prev) => ({ ...prev, recentBroadcasts: updatedRecent }));
       }
-      setBroadcasts((prev) => [createdBroadcast, ...prev.filter((b) => b.id !== createdBroadcast.id)]);
       setToast(`Broadcast "${createdBroadcast.title}" sent successfully!`);
       setTimeout(() => setToast(null), 4500);
       setBroadcastToGroup(null);
+      invalidateBroadcasts();
+      invalidateGroups();
     } catch (err) {
       throw err;
     }
@@ -364,17 +331,13 @@ function MessagesContent() {
         members: [...existing, ...addedMembers],
         memberCount: newTotal,
       });
-      setGroups((prev) =>
-        prev.map((g) =>
-          g.id === addMembersGroup.id ? { ...g, memberCount: newTotal } : g
-        )
-      );
       if (selectedGroup && selectedGroup.id === addMembersGroup.id) {
         setSelectedGroup((prev) => ({ ...prev, memberCount: newTotal }));
       }
       setToast(`Added ${addedMembers.length} members to ${addMembersGroup.name}!`);
       setTimeout(() => setToast(null), 4500);
       setAddMembersGroup(null);
+      invalidateGroups();
     } catch (err) {
       throw err;
     }
@@ -385,8 +348,6 @@ function MessagesContent() {
       {/* ============================================================ */}
       {/* 1. BROADCAST MODULE                                          */}
       {/* Default view on /admin/messages (or ?tab=broadcast)          */}
-      {/* broadcastView === 'LIST': Broadcast List page                */}
-      {/* broadcastView === 'CREATE': Full Page (media_1793701439985) */}
       {/* ============================================================ */}
       {activeModule === 'BROADCAST' && (
         <>
@@ -394,7 +355,7 @@ function MessagesContent() {
             <BroadcastListView
               broadcasts={broadcasts}
               pagination={broadcastPagination}
-              isLoading={isBroadcastLoading}
+              isLoading={isBroadcastLoading && broadcasts.length === 0}
               isFetching={isBroadcastFetching}
               search={broadcastSearch}
               onSearchChange={setBroadcastSearch}
@@ -430,16 +391,15 @@ function MessagesContent() {
       {/* ============================================================ */}
       {/* 2. GROUP MODULE STATE                                        */}
       {/* Shown on /admin/messages?tab=group                           */}
-      {/* Matches user uploaded images: Groups List, Create, Details   */}
       {/* ============================================================ */}
       {activeModule === 'GROUP_MESSAGE' && (
         <>
-          {/* Subview 1: Groups List (Image 1) */}
+          {/* Subview 1: Groups List */}
           {groupView === 'LIST' && (
             <GroupsListView
               groups={groups}
               pagination={groupPagination}
-              isLoading={isGroupLoading}
+              isLoading={isGroupLoading && groups.length === 0}
               isFetching={isGroupFetching}
               search={groupSearch}
               onSearchChange={setGroupSearch}
@@ -455,16 +415,24 @@ function MessagesContent() {
                 setBroadcastView('CREATE');
                 router.push('/admin/messages?tab=broadcast');
               }}
-              onViewGroup={(group) => {
+              onViewGroup={async (group) => {
                 setSelectedGroup(group);
                 setGroupView('DETAILS');
+                try {
+                  const full = await getGroupById(group.id);
+                  if (full) {
+                    setSelectedGroup(full);
+                  }
+                } catch (err) {
+                  console.warn('Failed to fetch full group details:', err);
+                }
               }}
               onEditGroup={(group) => setEditingGroup(group)}
               onDeleteGroup={(group) => setDeletingGroup(group)}
             />
           )}
 
-          {/* Subview 2: Create Group (Image 2) */}
+          {/* Subview 2: Create Group */}
           {groupView === 'CREATE' && (
             <CreateGroupView
               onBack={() => setGroupView('LIST')}
@@ -472,7 +440,7 @@ function MessagesContent() {
             />
           )}
 
-          {/* Subview 3: Group Details (Image 3) */}
+          {/* Subview 3: Group Details */}
           {groupView === 'DETAILS' && selectedGroup && (
             <GroupDetailsView
               group={selectedGroup}
@@ -486,10 +454,6 @@ function MessagesContent() {
           )}
         </>
       )}
-
-      {/* ============================================================ */}
-      {/* BROADCAST MODALS                                             */}
-      {/* ============================================================ */}
 
       {/* View Broadcast Details Modal */}
       <ViewBroadcastModal
@@ -506,9 +470,6 @@ function MessagesContent() {
         onConfirm={handleDeleteBroadcast}
       />
 
-      {/* ============================================================ */}
-      {/* GROUP MODALS                                                 */}
-      {/* ============================================================ */}
       {/* Delete Group Modal */}
       <DeleteGroupModal
         open={Boolean(deletingGroup)}

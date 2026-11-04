@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Users, UserCheck, Clock, XCircle } from 'lucide-react';
 import { getDashboardStats } from '@/services/admin.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,30 +9,24 @@ import StatCard from '@/components/admin/StatCard';
 import DashboardChart from '@/components/admin/DashboardChart';
 import Avatar from '@/components/common/Avatar';
 import Badge from '@/components/common/Badge';
-import Loader from '@/components/common/Loader';
+
+const DEFAULT_STATS = {
+  total: 21,
+  approved: 14,
+  pending: 3,
+  rejected: 4,
+  monthly: [42, 58, 49, 71, 66, 84, 77, 92],
+  recent: [],
+};
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    total: 21,
-    approved: 14,
-    pending: 3,
-    rejected: 4,
-    monthly: [42, 58, 49, 71, 66, 84, 77, 92],
-    recent: [],
+
+  const { data: stats = DEFAULT_STATS } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: getDashboardStats,
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
   });
-
-  useEffect(() => {
-    let active = true;
-    getDashboardStats().then((data) => {
-      if (active) setStats(data);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-
 
   return (
     <div className="space-y-6">

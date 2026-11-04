@@ -10,10 +10,11 @@ import {
   ChevronRight,
   Eye,
   Edit3,
+  SquarePen,
   Trash2,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
-import Loader from '@/components/common/Loader';
+import { GroupListSkeleton } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
 
@@ -73,7 +74,7 @@ export default function GroupsListView({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* + Add Group Button matching Image 1 */}
+          {/* + Add Group Button matching Image */}
           <Button
             type="button"
             variant="primary"
@@ -84,8 +85,8 @@ export default function GroupsListView({
             <span>Add Group</span>
           </Button>
 
-          {/* + Add Message Button matching Image 1 */}
-          {/* <Button
+          {/* + Add Message Button matching Image */}
+          <Button
             type="button"
             variant="primary"
             onClick={onAddMessage}
@@ -93,7 +94,7 @@ export default function GroupsListView({
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>Add Message</span>
-          </Button> */}
+          </Button>
         </div>
       </div>
 
@@ -165,10 +166,8 @@ export default function GroupsListView({
 
       {/* Groups List Stack matching Image 1 */}
       <div className="space-y-3.5">
-        {isLoading || isFetching ? (
-          <div className="flex justify-center py-16">
-            <Loader label="Loading groups..." />
-          </div>
+        {isLoading && displayedGroups.length === 0 ? (
+          <GroupListSkeleton rows={5} />
         ) : displayedGroups.length === 0 ? (
           <EmptyState
             title="No groups found"
@@ -204,7 +203,7 @@ export default function GroupsListView({
 
                 {/* Right: View, Edit & Delete Action Buttons matching other modules */}
                 <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {/* View Group Details Eye Button */}
+                  {/* View Group Details Icon Button */}
                   <button
                     type="button"
                     onClick={() => onViewGroup(group)}
@@ -215,7 +214,7 @@ export default function GroupsListView({
                     <Eye className="h-4 w-4 stroke-[2]" />
                   </button>
 
-                  {/* Edit Group Button */}
+                  {/* Edit Group Icon Button */}
                   <button
                     type="button"
                     onClick={() => onEditGroup(group)}
@@ -226,7 +225,7 @@ export default function GroupsListView({
                     <Edit3 className="h-4 w-4 stroke-[2]" />
                   </button>
 
-                  {/* Delete Group Button */}
+                  {/* Delete Group Icon Button */}
                   <button
                     type="button"
                     onClick={() => onDeleteGroup(group)}

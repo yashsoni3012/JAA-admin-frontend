@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import { ROUTES } from '@/constants/routes';
-import Loader from '@/components/common/Loader';
+import { Skeleton } from '@/components/common/Skeleton';
 
 // Visiting /logout calls http://localhost:5000/api/admin/logout, clears session, and redirects to /login
 export default function LogoutPage() {
@@ -41,7 +41,10 @@ export default function LogoutPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#EEF1FF]">
-      <Loader label="Signing out..." />
+      <div className="space-y-3 text-center">
+        <Skeleton className="h-8 w-44 rounded-xl mx-auto" />
+        <Skeleton className="h-4 w-32 rounded-lg mx-auto" />
+      </div>
     </main>
   );
 }

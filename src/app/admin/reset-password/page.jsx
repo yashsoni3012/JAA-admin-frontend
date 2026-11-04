@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import ResetPasswordForm from '@/components/auth/ResetPasswordForm';
-import Loader from '@/components/common/Loader';
+import { Skeleton } from '@/components/common/Skeleton';
 
 export const metadata = {
   title: 'Set New Password | JAA Admin',
@@ -36,7 +36,16 @@ export default function ResetPasswordPage() {
 
       {/* Main Content: Logo + Card */}
       <div className="relative z-10 w-full flex flex-col items-center justify-center">
-        <Suspense fallback={<Loader label="Loading" />}>
+        <Suspense
+          fallback={
+            <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-card space-y-4">
+              <Skeleton className="h-6 w-36 mx-auto rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-2xl" />
+              <Skeleton className="h-10 w-full rounded-2xl" />
+              <Skeleton className="h-11 w-full rounded-full" />
+            </div>
+          }
+        >
           <ResetPasswordForm />
         </Suspense>
       </div>

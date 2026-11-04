@@ -1,9 +1,11 @@
-import Loader from '@/components/common/Loader';
+'use client';
+
+import { AdminPageSkeleton } from '@/components/common/Skeleton';
 
 export default function Loading() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface">
-      <Loader label="Loading" />
+    <main className="min-h-screen bg-[#EEF1FF] p-4 sm:p-6 md:p-8">
+      <AdminPageSkeleton />
     </main>
   );
 }

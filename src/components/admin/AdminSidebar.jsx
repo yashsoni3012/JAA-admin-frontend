@@ -202,41 +202,53 @@ function AdminSidebarInner({
 
               return (
                 <div key={item.href} className="w-full space-y-1">
-                  <div
-                    onClick={() => {
-                      setMessagesOpen((prev) => !prev);
-                      if (!isActive) {
-                        router.push('/admin/messages?tab=broadcast');
+                  <div className="relative flex items-center">
+                    <Link
+                      href="/admin/messages?tab=broadcast"
+                      prefetch={true}
+                      onClick={() => {
+                        setMessagesOpen(true);
                         if (onNavigate) onNavigate();
-                      }
-                    }}
-                    className={cn(
-                      'group flex items-center justify-between transition-all duration-200 cursor-pointer w-full rounded-full px-5 py-3.5 font-medium select-none',
-                      isActive
-                        ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
-                        : 'text-slate-600 hover:bg-white/70 hover:text-ink'
-                    )}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <Icon
-                        className={cn(
-                          'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
-                          isActive ? 'text-white' : 'text-slate-500'
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span className="whitespace-nowrap overflow-hidden text-[15px]">
-                        {item.label}
-                      </span>
-                    </div>
-
-                    <ChevronDown
+                      }}
                       className={cn(
-                        'h-4 w-4 shrink-0 transition-transform duration-200',
-                        isActive ? 'text-white/80' : 'text-slate-400',
-                        messagesOpen && 'rotate-180'
+                        'group flex items-center justify-between transition-all duration-200 cursor-pointer w-full rounded-full px-5 py-3.5 font-medium select-none',
+                        isActive
+                          ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
+                          : 'text-slate-600 hover:bg-white/70 hover:text-ink'
                       )}
-                    />
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <Icon
+                          className={cn(
+                            'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                            isActive ? 'text-white' : 'text-slate-500'
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span className="whitespace-nowrap overflow-hidden text-[15px]">
+                          {item.label}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        aria-label="Toggle messages dropdown"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setMessagesOpen((prev) => !prev);
+                        }}
+                        className="p-1 -mr-1 rounded-full hover:bg-white/20 transition cursor-pointer"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            'h-4 w-4 shrink-0 transition-transform duration-200',
+                            isActive ? 'text-white/80' : 'text-slate-400',
+                            messagesOpen && 'rotate-180'
+                          )}
+                        />
+                      </button>
+                    </Link>
                   </div>
 
                   {/* Dropdown Menu in Sidebar for Broadcast & Group Message */}
@@ -244,6 +256,7 @@ function AdminSidebarInner({
                     <div className="ml-5 pl-3 border-l-2 border-indigo-200/70 space-y-1 py-1 animate-in fade-in-50 duration-200">
                       <Link
                         href="/admin/messages?tab=broadcast"
+                        prefetch={true}
                         onClick={onNavigate}
                         className={cn(
                           'flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer',
@@ -258,6 +271,7 @@ function AdminSidebarInner({
 
                       <Link
                         href="/admin/messages?tab=group"
+                        prefetch={true}
                         onClick={onNavigate}
                         className={cn(
                           'flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer',

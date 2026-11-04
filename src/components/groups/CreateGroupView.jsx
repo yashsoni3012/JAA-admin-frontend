@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Avatar from '@/components/common/Avatar';
-import Loader from '@/components/common/Loader';
+import { Skeleton } from '@/components/common/Skeleton';
 import { getMembers } from '@/services/admin.service';
 import { cn } from '@/lib/utils';
 
@@ -132,23 +132,35 @@ export default function CreateGroupView({ onBack, onGroupCreated }) {
       selectedMemberIds.has(m.id)
     );
 
+    const mappedMembers = selectedMembersData.map((m) => ({
+      id: typeof m.id === 'number' ? m.id : Number(m.id) || m.id,
+      memberId: typeof m.memberId === 'number' ? m.memberId : (Number(m.memberId) || Number(m.id) || m.id),
+      membershipId: m.membershipId || (m.memberId ? `JBAD${m.memberId}` : `JBAD${150 + (Number(m.id) || 0)}`),
+      name: m.name || m.fullName || '',
+      business: m.business || m.companyName || '',
+      mobile: m.mobile || m.phone || '',
+      email: m.email || '',
+      avatar: m.avatar || null,
+    }));
+
     const memberCount =
       addMode === 'EXCEL' && excelFile
         ? excelCount
-        : selectedMembersData.length > 0
-        ? selectedMembersData.length
-        : 25; // default sample if none selected
+        : mappedMembers.length > 0
+        ? mappedMembers.length
+        : 0;
 
     setIsSubmitting(true);
     setError('');
 
     try {
       const payload = {
+        groupName: groupName.trim(),
         name: groupName.trim(),
         description: description.trim(),
         about: description.trim(),
         memberCount,
-        members: selectedMembersData,
+        members: mappedMembers,
         groupType: 'All Members',
         createdBy: 'Admin User',
         createdOn: new Date().toLocaleDateString('en-GB', {
@@ -279,20 +291,46 @@ export default function CreateGroupView({ onBack, onGroupCreated }) {
                     {selectedMemberIds.size} Selected
                   </span>
                   <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedMemberIds.size === filteredMembers.length && filteredMembers.length > 0) {
+                        setSelectedMemberIds(new Set());
+                      } else {
+                        setSelectedMemberIds(new Set(filteredMembers.map((m) => m.id)));
+                      }
+                    }}
+                    className="font-bold text-[#2832A4] hover:underline cursor-pointer"
+                  >
+                    {selectedMemberIds.size === filteredMembers.length && filteredMembers.length > 0
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </button>
+                  {selectedMemberIds.size > 0 && (
+                    <button
                       type="button"
                       onClick={handleClearAll}
-                      className="font-bold text-[#2832A4] hover:underline cursor-pointer"
+                      className="font-medium text-slate-500 hover:text-red-500 hover:underline cursor-pointer"
                     >
-                      Clear All
+                      Clear
                     </button>
+                  )}
                 </div>
               </div>
 
               {/* Members Selection List matching Image 2 */}
               <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 max-h-80 overflow-y-auto no-scrollbar shadow-2xs">
                 {loadingMembers ? (
-                  <div className="flex justify-center py-12">
-                    <Loader label="Loading members..." />
+                  <div className="p-4 space-y-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-3 py-2">
+                        <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+                        <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                        <div className="space-y-1.5 flex-1">
+                          <Skeleton className="h-3.5 w-36 rounded-md" />
+                          <Skeleton className="h-2.5 w-24 rounded-md" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : filteredMembers.length === 0 ? (
                   <div className="py-12 text-center text-xs sm:text-sm text-slate-400">

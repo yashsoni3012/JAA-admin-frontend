@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   Search,
@@ -11,7 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
-import Loader from '@/components/common/Loader';
+import { EventListSkeleton } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState';
 import EventCard from '@/components/events/EventCard';
 import AddEditEventModal from '@/components/events/AddEditEventModal';
@@ -26,17 +27,7 @@ import { cn } from '@/lib/utils';
 const PAGE_SIZES = [5, 10, 20, 50];
 
 export default function EventsPage() {
-  const [events, setEvents] = useState([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-    hasNext: false,
-    hasPrev: false,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -60,43 +51,36 @@ export default function EventsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Load events from backend
-  const loadEvents = useCallback(
-    async (targetPage = 1, targetSize = 10, targetSearch = '') => {
-      setIsFetching(true);
-      try {
-        const res = await getEvents({
-          page: targetPage,
-          limit: targetSize,
-          search: targetSearch,
-        });
+  // TanStack Query caching
+  const {
+    data: eventData,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: ['events', { page, pageSize, debouncedSearch }],
+    queryFn: () =>
+      getEvents({
+        page,
+        limit: pageSize,
+        search: debouncedSearch,
+      }),
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+  });
 
-        setEvents(res.events || []);
-        if (res.pagination) {
-          setPagination({
-            total: res.pagination.total ?? res.events.length,
-            page: res.pagination.page ?? targetPage,
-            limit: res.pagination.limit ?? targetSize,
-            totalPages:
-              res.pagination.totalPages ??
-              Math.max(1, Math.ceil((res.pagination.total ?? res.events.length) / targetSize)),
-            hasNext: Boolean(res.pagination.hasNext),
-            hasPrev: Boolean(res.pagination.hasPrev),
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load events:', err);
-      } finally {
-        setIsLoading(false);
-        setIsFetching(false);
-      }
-    },
-    []
+  const events = eventData?.events || [];
+  const rawPagination = eventData?.pagination || {};
+  const totalItems = rawPagination.total ?? events.length;
+  const totalPages = Math.max(
+    1,
+    rawPagination.totalPages ?? Math.ceil(totalItems / pageSize)
   );
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
 
-  useEffect(() => {
-    loadEvents(page, pageSize, debouncedSearch);
-  }, [loadEvents, page, pageSize, debouncedSearch]);
+  const invalidateEvents = () => {
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+  };
 
   // Client-side status filtering if active/inactive filter is chosen
   const filteredEvents = useMemo(() => {
@@ -113,50 +97,36 @@ export default function EventsPage() {
   const handleToggleStatus = async (id) => {
     try {
       const updated = await toggleEventStatus(id);
-      setEvents((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, isActive: updated.isActive } : e))
-      );
       setToast(`Event status updated to ${updated.isActive ? 'Active' : 'Inactive'}.`);
       setTimeout(() => setToast(null), 3500);
+      invalidateEvents();
     } catch (err) {
       console.error('Failed to toggle event status:', err);
       setToast(err.message || 'Failed to toggle event status.');
       setTimeout(() => setToast(null), 3500);
-      throw err;
     }
   };
 
   // Saved (created or updated)
   const handleEventSaved = (savedEvent, isEditing) => {
     if (isEditing) {
-      setEvents((prev) =>
-        prev.map((e) => (e.id === savedEvent.id ? { ...e, ...savedEvent } : e))
-      );
       if (selectedEvent && selectedEvent.id === savedEvent.id) {
         setSelectedEvent(savedEvent);
       }
       setToast(`Event "${savedEvent.title}" updated successfully.`);
     } else {
-      setEvents((prev) => [savedEvent, ...prev]);
       setToast(`Event "${savedEvent.title}" created successfully.`);
     }
     setTimeout(() => setToast(null), 4000);
-    loadEvents(page, pageSize, debouncedSearch);
+    invalidateEvents();
   };
 
   // Deleted
-  const handleEventDeleted = (id) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+  const handleEventDeleted = () => {
     setToast('Event deleted successfully.');
     setTimeout(() => setToast(null), 3500);
-    loadEvents(page, pageSize, debouncedSearch);
+    invalidateEvents();
   };
-
-  // Pagination calculation
-  const totalItems = pagination.total;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
 
   const pageNumbers = useMemo(() => {
     const pages = [];
@@ -283,10 +253,8 @@ export default function EventsPage() {
         </div>
 
         {/* EVENTS LIST */}
-        {isFetching && events.length === 0 ? (
-          <div className="flex justify-center py-20">
-            <Loader label="Loading events..." />
-          </div>
+        {isLoading && events.length === 0 ? (
+          <EventListSkeleton rows={4} />
         ) : filteredEvents.length === 0 ? (
           <div className="py-12">
             <EmptyState
@@ -333,7 +301,7 @@ export default function EventsPage() {
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1 || isFetching}
+                disabled={currentPage <= 1}
                 aria-label="Previous page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >
@@ -346,7 +314,6 @@ export default function EventsPage() {
                   key={num}
                   type="button"
                   onClick={() => setPage(num)}
-                  disabled={isFetching}
                   aria-current={num === currentPage ? 'page' : undefined}
                   className={cn(
                     'flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition shadow-xs',
@@ -363,7 +330,7 @@ export default function EventsPage() {
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages || isFetching}
+                disabled={currentPage >= totalPages}
                 aria-label="Next page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >
@@ -438,4 +405,3 @@ export default function EventsPage() {
     </div>
   );
 }
-

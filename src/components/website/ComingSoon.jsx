@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SITE } from '@/config/site';
 import Logo from '@/components/common/Logo';
 
@@ -15,6 +16,15 @@ export default function ComingSoon() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-500">{SITE.name}</p>
         <h1 className="mt-4 text-4xl font-black text-ink sm:text-6xl">Coming Soon</h1>
         <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-slate-500">{SITE.launchMessage}</p>
+
+        <div className="mt-8">
+          <Link
+            href="/admin/login"
+            className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-brand-600"
+          >
+            Go to Admin Portal &rarr;
+          </Link>
+        </div>
       </div>
     </main>
   );

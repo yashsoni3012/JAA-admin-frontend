@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
   User,
@@ -10,7 +11,6 @@ import {
   Building,
   Shield,
   Edit3,
-  CheckCircle2,
   Clock,
   Hash,
   Activity,
@@ -18,13 +18,11 @@ import {
   RefreshCw,
   KeyRound,
   Lock,
-  Camera,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import Avatar from '@/components/common/Avatar';
 import Button from '@/components/common/Button';
-import Loader from '@/components/common/Loader';
+import { Skeleton } from '@/components/common/Skeleton';
 import EditProfileModal from '@/components/admin/EditProfileModal';
 import ChangePasswordModal from '@/components/admin/ChangePasswordModal';
 import { fetchAdminProfile, getAvatarUrl } from '@/services/admin.service';
@@ -59,8 +57,24 @@ function formatDob(val) {
 }
 
 export default function ProfilePage() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [profile, setProfile] = useState(() => ({
+  const [editOpen, setEditOpen] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
+
+  // TanStack Query caching
+  const {
+    data: profileData,
+    isLoading: loading,
+    error,
+    refetch: loadProfile,
+  } = useQuery({
+    queryKey: ['admin-profile'],
+    queryFn: fetchAdminProfile,
+    staleTime: 1000 * 60 * 5, // 5 minutes fresh cache
+  });
+
+  const profile = profileData || {
     fullName: user?.name || 'Admin User',
     name: user?.name || 'Admin User',
     email: user?.email || 'admin@gmail.com',
@@ -70,48 +84,25 @@ export default function ProfilePage() {
     city: 'Ahmedabad',
     businessName: 'JAA Administration',
     role: 'Administrator',
-  }));
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [editOpen, setEditOpen] = useState(false);
-  const [changePwOpen, setChangePwOpen] = useState(false);
-
-  const loadProfile = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await fetchAdminProfile();
-      setProfile(data);
-    } catch (err) {
-      console.error('Failed to load profile:', err);
-      setError(err.message || 'Failed to load admin profile');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
-
-  const handleProfileUpdated = (updated) => {
-    setProfile(updated);
   };
 
+  const handleProfileUpdated = (updated) => {
+    queryClient.setQueryData(['admin-profile'], updated);
+    queryClient.invalidateQueries({ queryKey: ['admin-profile'] });
+  };
 
-
-  if (error && !profile) {
+  if (error && !profileData) {
     return (
       <div className="rounded-3xl border border-red-200 bg-white p-8 text-center shadow-card max-w-lg mx-auto mt-10">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-600 mb-4">
           <AlertCircle className="h-6 w-6 stroke-[2.2]" />
         </div>
         <h3 className="text-lg font-bold text-ink">Unable to Load Profile</h3>
-        <p className="mt-1.5 text-sm text-slate-500">{error}</p>
+        <p className="mt-1.5 text-sm text-slate-500">{error?.message || 'Failed to load admin profile'}</p>
         <Button
           type="button"
           variant="primary"
-          onClick={loadProfile}
+          onClick={() => loadProfile()}
           className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold"
         >
           <RefreshCw className="h-4 w-4" />
@@ -180,77 +171,83 @@ export default function ProfilePage() {
                 name={name}
                 src={image}
                 size="xl"
-                className="h-28 w-28 text-3xl font-bold shadow-md border-4 border-slate-50 object-cover"
+                className="h-28 w-28 text-3xl shadow-lg ring-4 ring-slate-100"
               />
-              <button
-                type="button"
-                onClick={() => setEditOpen(true)}
-                title="Change profile image"
-                className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white shadow-md hover:bg-brand-700 transition cursor-pointer"
-              >
-                <Camera className="h-4 w-4" />
-              </button>
             </div>
 
-            <h2 className="mt-5 text-xl font-bold text-ink tracking-tight">{name}</h2>
-            <p className="text-sm font-medium text-slate-500 mt-0.5">{email}</p>
+            <h2 className="mt-4 text-xl font-bold text-ink">{name}</h2>
+            <p className="text-xs font-medium text-slate-500">{email}</p>
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#2832A4] to-[#4F5DEC] px-3.5 py-1 text-xs font-semibold text-white shadow-xs capitalize">
-                <Shield className="h-3 w-3" />
-                {role}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3.5 py-1 text-xs font-semibold text-brand-600 border border-brand-100">
+                <Shield className="h-3.5 w-3.5" />
+                <span className="capitalize">{role}</span>
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 capitalize">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                {status}
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold border ${
+                  status.toLowerCase() === 'active'
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                    : 'bg-amber-50 text-amber-600 border-amber-200'
+                }`}
+              >
+                <Activity className="h-3.5 w-3.5" />
+                <span className="capitalize">{status}</span>
               </span>
             </div>
 
-            <div className="w-full mt-6 pt-6 border-t border-slate-100 space-y-3 text-left">
+            <div className="mt-6 w-full border-t border-slate-100 pt-6 text-left space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-medium">Joined On</span>
-                <span className="font-medium text-slate-700">{createdAt}</span>
+                <span className="flex items-center gap-2 text-slate-400">
+                  <Hash className="h-3.5 w-3.5" />
+                  Admin ID
+                </span>
+                <span className="font-semibold text-slate-700 font-mono">
+                  {id || (mongoId ? mongoId.slice(-6) : 'N/A')}
+                </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400 font-medium">Last Updated</span>
-                <span className="font-medium text-slate-700">{updatedAt}</span>
+                <span className="flex items-center gap-2 text-slate-400">
+                  <Clock className="h-3.5 w-3.5" />
+                  Created At
+                </span>
+                <span className="font-semibold text-slate-700">{formatDob(createdAt) || createdAt}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-2 text-slate-400">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Last Updated
+                </span>
+                <span className="font-semibold text-slate-700">{formatDob(updatedAt) || updatedAt}</span>
               </div>
             </div>
+          </section>
 
-            <div className="mt-6 flex flex-col gap-2.5 w-full">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditOpen(true)}
-                className="w-full rounded-2xl py-2.5 text-xs font-semibold flex items-center justify-center gap-2"
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                <span>Edit Details</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setChangePwOpen(true)}
-                className="w-full rounded-2xl py-2.5 text-xs font-semibold flex items-center justify-center gap-2 border-slate-200 text-slate-700 hover:bg-slate-50"
-              >
-                <KeyRound className="h-3.5 w-3.5 text-brand-600" />
-                <span>Change Password</span>
-              </Button>
+          {/* Quick Security Status Box */}
+          <section className="rounded-3xl border border-white bg-white p-6 shadow-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <Lock className="h-4 w-4 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-ink">Account Security</h4>
+                <p className="text-xs text-slate-400">Protected with password</p>
+              </div>
             </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Your administrator account credentials are encrypted. Keep your password confidential.
+            </p>
           </section>
         </div>
 
-        {/* Right Column: Detailed Information Blocks */}
+        {/* Right Column: Detailed Profile Info */}
         <div className="space-y-6 lg:col-span-2">
           {/* Block 1: Personal & Contact Information */}
           <section className="rounded-3xl border border-white bg-white p-6 md:p-8 shadow-card">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                  <User className="h-4 w-4 stroke-[2.2]" />
-                </div>
-                <h3 className="font-bold text-lg text-ink">Personal & Contact Details</h3>
+            <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                <User className="h-4 w-4 stroke-[2.2]" />
               </div>
+              <h3 className="font-bold text-lg text-ink">Personal Information</h3>
             </div>
 
             <dl className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -263,32 +260,21 @@ export default function ProfilePage() {
                 </dd>
               </div>
 
-              {/* Email (Read-Only) */}
+              {/* Email Address */}
               <div>
-                <div className="flex items-center gap-2">
-                  <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Email Address</dt>
-                </div>
+                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Email Address</dt>
                 <dd className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-ink">
                   <Mail className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span className="truncate">{email}</span>
+                  <span>{email}</span>
                 </dd>
               </div>
 
-              {/* Mobile / Phone */}
+              {/* Phone / Mobile */}
               <div>
-                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Mobile / Contact</dt>
+                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Mobile Number</dt>
                 <dd className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-ink">
                   <Phone className="h-4 w-4 text-slate-400 shrink-0" />
                   <span>{mobile || <span className="text-slate-400 font-normal italic">Not provided</span>}</span>
-                </dd>
-              </div>
-
-              {/* Gender */}
-              <div>
-                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Gender</dt>
-                <dd className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-ink">
-                  <User className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span>{gender || <span className="text-slate-400 font-normal italic">Not provided</span>}</span>
                 </dd>
               </div>
 
@@ -301,47 +287,19 @@ export default function ProfilePage() {
                 </dd>
               </div>
 
-              {/* Profile Image Field */}
+              {/* Gender */}
               <div>
-                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Profile Image</dt>
-                <dd className="mt-1.5 flex items-center gap-2.5 text-sm font-semibold text-ink">
-                  <ImageIcon className="h-4 w-4 text-slate-400 shrink-0" />
-                  {image ? (
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={image}
-                        alt="Profile"
-                        className="h-6 w-6 rounded-full object-cover border border-slate-200"
-                      />
-                      <span className="text-brand-600 font-medium">Uploaded</span>
-                      <button
-                        type="button"
-                        onClick={() => setEditOpen(true)}
-                        className="text-xs text-slate-400 hover:text-brand-600 underline font-normal ml-1"
-                      >
-                        Change
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400 font-normal italic">No image uploaded</span>
-                      <button
-                        type="button"
-                        onClick={() => setEditOpen(true)}
-                        className="text-xs text-brand-600 hover:underline font-medium"
-                      >
-                        + Upload
-                      </button>
-                    </div>
-                  )}
+                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Gender</dt>
+                <dd className="mt-1.5 text-sm font-semibold text-ink capitalize">
+                  {gender || <span className="text-slate-400 font-normal italic">Not provided</span>}
                 </dd>
               </div>
 
               {/* Role */}
               <div>
-                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">System Role</dt>
-                <dd className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-ink capitalize">
-                  <Shield className="h-4 w-4 text-slate-400 shrink-0" />
+                <dt className="text-xs uppercase font-bold tracking-wider text-slate-400">Role & Access</dt>
+                <dd className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-brand-600 capitalize">
+                  <Shield className="h-4 w-4 text-brand-600 shrink-0" />
                   <span>{role}</span>
                 </dd>
               </div>

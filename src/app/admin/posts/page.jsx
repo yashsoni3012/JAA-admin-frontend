@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   Plus,
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import Avatar from '@/components/common/Avatar';
 import Button from '@/components/common/Button';
-import Loader from '@/components/common/Loader';
+import { TableSkeleton } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState';
 import DatePicker, { parseDateString } from '@/components/common/DatePicker';
 import CreatePostView from '@/components/posts/CreatePostView';
@@ -45,21 +46,12 @@ const TABS = [
 const PAGE_SIZES = [5, 10, 20, 50];
 
 export default function PostsPage() {
+  const queryClient = useQueryClient();
+
   // Navigation / View state: 'LIST' | 'CREATE' | 'VIEW'
   const [currentView, setCurrentView] = useState('LIST');
   const [selectedPostDetail, setSelectedPostDetail] = useState(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-
-  // Data state
-  const [posts, setPosts] = useState([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
 
   // Filters state
   const [activeTab, setActiveTab] = useState('ALL');
@@ -93,53 +85,28 @@ export default function PostsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Load posts from API
-  const loadPosts = useCallback(
-    async (targetPage = 1, targetLimit = 10, query = '', type = 'ALL') => {
-      setIsFetching(true);
-      try {
-        const mediaTypeParam =
-          type !== 'ALL' && type !== 'JAA' && type !== 'EVENTS'
-            ? type === 'PHOTOS'
-              ? 'Photo'
-              : type === 'VIDEOS'
-              ? 'Video'
-              : type === 'NOTICES'
-              ? 'Notice'
-              : type
-            : '';
+  // TanStack Query caching
+  const {
+    data: postsData,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: ['posts', { debouncedSearch }],
+    queryFn: () =>
+      getPosts({
+        page: 1,
+        limit: 100,
+        search: debouncedSearch,
+      }),
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
+  });
 
-        const res = await getPosts({
-          page: targetPage,
-          limit: targetLimit,
-          search: query,
-          mediaType: mediaTypeParam,
-        });
+  const posts = postsData?.posts || [];
 
-        setPosts(res.posts || []);
-        if (res.pagination) {
-          setPagination({
-            total: res.pagination.total ?? res.posts.length,
-            page: res.pagination.page ?? targetPage,
-            limit: res.pagination.limit ?? targetLimit,
-            totalPages:
-              res.pagination.totalPages ??
-              Math.max(1, Math.ceil((res.pagination.total ?? res.posts.length) / targetLimit)),
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load posts:', err);
-      } finally {
-        setIsLoading(false);
-        setIsFetching(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    loadPosts(page, pageSize, debouncedSearch, activeTab);
-  }, [loadPosts, page, pageSize, debouncedSearch, activeTab]);
+  const invalidatePosts = () => {
+    queryClient.invalidateQueries({ queryKey: ['posts'] });
+  };
 
   // Handle clicking "View" button -> fetches ID wise API GET /api/admin/posts/:id
   const handleViewPost = async (postItem) => {
@@ -161,10 +128,10 @@ export default function PostsPage() {
   };
 
   // Handle post created
-  const handlePostCreated = (newPost) => {
+  const handlePostCreated = () => {
     showToast('Post published successfully!');
     setCurrentView('LIST');
-    loadPosts(1, pageSize, debouncedSearch, activeTab);
+    invalidatePosts();
   };
 
   // Handle delete post confirm
@@ -176,12 +143,12 @@ export default function PostsPage() {
       setCurrentView('LIST');
       setSelectedPostDetail(null);
     }
-    loadPosts(page, pageSize, debouncedSearch, activeTab);
+    invalidatePosts();
   };
 
   // Compute tab counts
   const tabCounts = useMemo(() => {
-    let all = pagination.total || posts.length;
+    let all = posts.length;
     let jaa = 0;
     let photos = 0;
     let videos = 0;
@@ -207,7 +174,7 @@ export default function PostsPage() {
       notices: Math.max(notices, 0),
       events: Math.max(events, 0),
     };
-  }, [posts, pagination.total]);
+  }, [posts]);
 
   // Client-side filtering by active tab & dropdown type
   const filteredPosts = useMemo(() => {
@@ -525,9 +492,7 @@ export default function PostsPage() {
 
         {/* POSTS TABLE LIST matching Image 1 */}
         {isLoading && posts.length === 0 ? (
-          <div className="flex justify-center py-20">
-            <Loader label="Loading posts..." />
-          </div>
+          <TableSkeleton rows={6} cols={6} />
         ) : filteredPosts.length === 0 ? (
           <div className="py-12">
             <EmptyState
@@ -649,7 +614,6 @@ export default function PostsPage() {
                       {/* 6. Actions: Eye Icon Button matching Event page & Delete */}
                       <td className="py-4 pr-6 pl-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
-                          {/* View Details Eye Icon Button matching Event page */}
                           <button
                             type="button"
                             onClick={() => handleViewPost(item)}
@@ -661,7 +625,6 @@ export default function PostsPage() {
                             <Eye className="h-4 w-4 stroke-[2]" />
                           </button>
 
-                          {/* Delete Post Button */}
                           <button
                             type="button"
                             onClick={() => setDeletingPost(item)}
@@ -691,24 +654,21 @@ export default function PostsPage() {
           <div className="flex items-center gap-3 self-end sm:self-auto">
             {/* Pagination Button Group */}
             <nav aria-label="Posts pagination" className="flex items-center gap-1.5">
-              {/* Prev Button */}
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1 || isFetching}
+                disabled={currentPage <= 1}
                 aria-label="Previous page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >
                 <ChevronLeft className="h-4 w-4 text-slate-600" />
               </button>
 
-              {/* Numbered Page Buttons */}
               {pageNumbers.map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setPage(num)}
-                  disabled={isFetching}
                   className={cn(
                     'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition shadow-xs',
                     currentPage === num
@@ -720,11 +680,10 @@ export default function PostsPage() {
                 </button>
               ))}
 
-              {/* Next Button */}
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages || isFetching}
+                disabled={currentPage >= totalPages}
                 aria-label="Next page"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition shadow-xs"
               >
@@ -763,4 +722,3 @@ export default function PostsPage() {
     </div>
   );
 }
-

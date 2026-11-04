@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 import Button from '@/components/common/Button';
-import Loader from '@/components/common/Loader';
+import { Skeleton } from '@/components/common/Skeleton';
 import MemberIdCard from '@/components/members/MemberIdCard';
 import { getMemberById } from '@/services/admin.service';
 
@@ -51,8 +51,15 @@ export default function MemberIdCardModal({
     >
       <div className="space-y-4 sm:space-y-6">
         {loading && !activeMember?.idCard?.qrCode ? (
-          <div className="flex justify-center py-12">
-            <Loader label="Loading member card..." />
+          <div className="rounded-3xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-4 w-40 rounded-md" />
+                <Skeleton className="h-3 w-28 rounded-md" />
+              </div>
+            </div>
+            <Skeleton className="h-32 w-full rounded-2xl" />
           </div>
         ) : (
           <MemberIdCard member={activeMember || member} />

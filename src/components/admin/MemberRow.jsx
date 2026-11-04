@@ -1,3 +1,6 @@
+'use client';
+
+import { memo } from 'react';
 import Avatar from '@/components/common/Avatar';
 import Badge from '@/components/common/Badge';
 import { Phone, Mail, Building2, Eye, Pencil, Check, X, CreditCard, Trash2 } from 'lucide-react';
@@ -5,7 +8,7 @@ import { Phone, Mail, Building2, Eye, Pencil, Check, X, CreditCard, Trash2 } fro
 // One member card row, laid out responsively for Mobile, Tablet, and Desktop.
 // Mobile: Clean touch-friendly card with call/email actions and aligned buttons.
 // Tablet & Desktop: 12-column structured table row where actions fit smoothly on one line.
-export default function MemberRow({ member, onView, onEdit, onApprove, onReject, onIdCard, onDelete }) {
+function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdCard, onDelete }) {
   const statusStr = String(member.status || '').toLowerCase();
   const isPending = statusStr === 'pending';
   const isApproved = statusStr === 'approved';
@@ -298,3 +301,5 @@ export default function MemberRow({ member, onView, onEdit, onApprove, onReject,
     </li>
   );
 }
+
+export default memo(MemberRowComponent);

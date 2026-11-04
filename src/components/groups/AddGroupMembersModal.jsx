@@ -6,7 +6,7 @@ import Button from '@/components/common/Button';
 import Avatar from '@/components/common/Avatar';
 import { Search, UserPlus, Check } from 'lucide-react';
 import { getMembers } from '@/services/admin.service';
-import Loader from '@/components/common/Loader';
+import { Skeleton } from '@/components/common/Skeleton';
 
 export default function AddGroupMembersModal({ open, group, onClose, onMembersAdded }) {
   const [members, setMembers] = useState([]);
@@ -106,8 +106,17 @@ export default function AddGroupMembersModal({ open, group, onClose, onMembersAd
         {/* Member List */}
         <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-slate-50/50 p-2">
           {loading ? (
-            <div className="flex justify-center py-10">
-              <Loader label="Loading members..." />
+            <div className="p-3 space-y-2.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 py-1.5">
+                  <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-3 w-32 rounded-md" />
+                    <Skeleton className="h-2 w-20 rounded-md" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredMembers.length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-400">
