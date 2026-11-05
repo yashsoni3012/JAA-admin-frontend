@@ -247,9 +247,9 @@ export default function ComplaintsPage() {
       {/* Main Complaints Card matching Image 1 */}
       <section className="rounded-3xl border border-white bg-white p-6 md:p-8 shadow-card space-y-6">
         {/* Title */}
-        <h2 className="text-xl md:text-2xl font-bold text-ink">
+        {/* <h2 className="text-xl md:text-2xl font-bold text-ink">
           Complaints
-        </h2>
+        </h2> */}
 
         {/* TABS ROW matching Image 1 */}
         <div className="flex border-b border-slate-100 overflow-x-auto no-scrollbar gap-8">

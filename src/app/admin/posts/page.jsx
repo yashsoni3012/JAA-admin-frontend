@@ -349,65 +349,62 @@ export default function PostsPage() {
 
       {/* Main Posts Card matching Image 1 */}
       <section className="rounded-3xl border border-white bg-white p-6 md:p-8 shadow-card space-y-6">
-        {/* Top Header Row: Title & + Create Post Button matching Image 1 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight">
-              Posts
-            </h2>
+        {/* Filter Tabs & + Create Post Button in Equal Line */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100">
+          {/* TABS ROW (Filterations) */}
+          <div className="flex overflow-x-auto no-scrollbar gap-6 sm:gap-8">
+            {TABS.map((tab) => {
+              const count =
+                tab.id === 'ALL'
+                  ? tabCounts.all
+                  : tab.id === 'JAA'
+                  ? tabCounts.jaa
+                  : tab.id === 'PHOTOS'
+                  ? tabCounts.photos
+                  : tab.id === 'VIDEOS'
+                  ? tabCounts.videos
+                  : tab.id === 'NOTICES'
+                  ? tabCounts.notices
+                  : tabCounts.events;
+
+              const isActive = activeTab === tab.id;
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setPage(1);
+                  }}
+                  className={cn(
+                    'pb-3.5 text-sm font-semibold transition whitespace-nowrap relative',
+                    isActive
+                      ? 'text-[#2832A4]'
+                      : 'text-slate-500 hover:text-slate-700 font-medium'
+                  )}
+                >
+                  {tab.label}({count})
+                  {isActive && (
+                    <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-[#2832A4] rounded-full" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          <Button
-            type="button"
-            variant="primary"
-            onClick={() => setCurrentView('CREATE')}
-            className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-md shadow-[#2832A4]/20"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create Post</span>
-          </Button>
-        </div>
-
-        {/* TABS ROW matching Image 1 */}
-        <div className="flex border-b border-slate-100 overflow-x-auto no-scrollbar gap-8">
-          {TABS.map((tab) => {
-            const count =
-              tab.id === 'ALL'
-                ? tabCounts.all
-                : tab.id === 'JAA'
-                ? tabCounts.jaa
-                : tab.id === 'PHOTOS'
-                ? tabCounts.photos
-                : tab.id === 'VIDEOS'
-                ? tabCounts.videos
-                : tab.id === 'NOTICES'
-                ? tabCounts.notices
-                : tabCounts.events;
-
-            const isActive = activeTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setPage(1);
-                }}
-                className={cn(
-                  'pb-3.5 text-sm font-semibold transition whitespace-nowrap relative',
-                  isActive
-                    ? 'text-[#2832A4]'
-                    : 'text-slate-500 hover:text-slate-700 font-medium'
-                )}
-              >
-                {tab.label}({count})
-                {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2832A4] rounded-full" />
-                )}
-              </button>
-            );
-          })}
+          {/* Action Button: Create Post with equal height */}
+          <div className="shrink-0 pb-3 self-end sm:self-auto">
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setCurrentView('CREATE')}
+              className="h-10 inline-flex items-center gap-2 rounded-full px-6 text-sm font-semibold shadow-md shadow-[#2832A4]/20"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Post</span>
+            </Button>
+          </div>
         </div>
 
         {/* CONTROLS BAR: Search, Type Filter & Date Range matching Image 1 */}
@@ -420,7 +417,7 @@ export default function PostsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search post by title, type or author..."
-              className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-ink placeholder:text-slate-400 shadow-xs focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition"
+              className="h-10 w-full rounded-full border border-slate-200 bg-white pl-11 pr-4 text-sm text-ink placeholder:text-slate-400 shadow-xs focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition"
             />
           </div>
 
@@ -431,7 +428,7 @@ export default function PostsPage() {
               <button
                 type="button"
                 onClick={() => setShowTypeDropdown((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-xs transition"
+                className="h-10 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-xs transition"
               >
                 <span>
                   {selectedTypeFilter === 'ALL'
@@ -480,7 +477,7 @@ export default function PostsPage() {
                 align="right"
                 className="w-auto"
                 inputClassName={cn(
-                  'rounded-full px-4 py-2 text-xs sm:text-sm font-semibold shadow-xs transition select-none',
+                  'h-10 rounded-full px-4 text-xs sm:text-sm font-semibold shadow-xs transition select-none',
                   dateFilter
                     ? 'border-[#2832A4] bg-blue-50/50 text-[#2832A4]'
                     : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'

@@ -4,14 +4,25 @@ import { memo } from 'react';
 import Avatar from '@/components/common/Avatar';
 import Badge from '@/components/common/Badge';
 import { Phone, Mail, Building2, Eye, Pencil, Check, X, CreditCard, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // One member card row, laid out responsively for Mobile, Tablet, and Desktop.
 // Mobile: Clean touch-friendly card with call/email actions and aligned buttons.
 // Tablet & Desktop: 12-column structured table row where actions fit smoothly on one line.
-function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdCard, onDelete }) {
+function MemberRowComponent({
+  member,
+  onView,
+  onEdit,
+  onApprove,
+  onReject,
+  onIdCard,
+  onDelete,
+  onToggleActive,
+}) {
   const statusStr = String(member.status || '').toLowerCase();
   const isPending = statusStr === 'pending';
   const isApproved = statusStr === 'approved';
+  const isActive = member.isActive !== undefined ? Boolean(member.isActive) : (statusStr === 'approved' || statusStr === 'active');
 
   return (
     <li className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors">
@@ -39,7 +50,40 @@ function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdC
             </div>
           </div>
           <div className="shrink-0 pt-0.5">
-            <Badge status={member.status} />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onToggleActive) onToggleActive(member, !isActive);
+              }}
+              title={isActive ? 'Click to make Inactive' : 'Click to make Active'}
+              className="inline-flex items-center gap-2 cursor-pointer focus:outline-none select-none transition-opacity active:opacity-80"
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                  isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
+                    isActive ? 'translate-x-5' : 'translate-x-0'
+                  )}
+                />
+              </span>
+              <span
+                className={cn(
+                  'text-xs sm:text-sm font-medium transition-colors select-none',
+                  isActive ? 'text-[#2832A4]' : 'text-slate-400'
+                )}
+              >
+                {isActive ? 'Active' : 'Inactive'}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -94,46 +138,48 @@ function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdC
               <Eye className="h-4 w-4" />
             </button>
 
-            {/* Member ID Card - Visible only when Approved */}
-            {isApproved && onIdCard && (
-              <button
-                type="button"
-                onClick={() => onIdCard(member)}
-                title="View ID Card"
-                aria-label="View ID Card"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50/70 text-[#1E2B8F] transition-all hover:bg-indigo-100 active:scale-95 shadow-2xs cursor-pointer"
-              >
-                <CreditCard className="h-4 w-4" />
-              </button>
+            {/* When Approved: ID Card, Edit, Delete */}
+            {isApproved && (
+              <>
+                {onIdCard && (
+                  <button
+                    type="button"
+                    onClick={() => onIdCard(member)}
+                    title="View ID Card"
+                    aria-label="View ID Card"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50/70 text-[#1E2B8F] transition-all hover:bg-indigo-100 active:scale-95 shadow-2xs cursor-pointer"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                  </button>
+                )}
+
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(member)}
+                    title="Edit Member"
+                    aria-label="Edit Member"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-all hover:border-brand-500 hover:text-brand-600 hover:bg-slate-50 active:scale-95 shadow-2xs cursor-pointer"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(member)}
+                    title="Delete Member"
+                    aria-label="Delete Member"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/70 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 active:scale-95 shadow-2xs cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </>
             )}
 
-            {/* Edit Member */}
-            {onEdit && (
-              <button
-                type="button"
-                onClick={() => onEdit(member)}
-                title="Edit Member"
-                aria-label="Edit Member"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-all hover:border-brand-500 hover:text-brand-600 hover:bg-slate-50 active:scale-95 shadow-2xs cursor-pointer"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            )}
-
-            {/* Delete Member */}
-            {onDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(member)}
-                title="Delete Member"
-                aria-label="Delete Member"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/70 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 active:scale-95 shadow-2xs cursor-pointer"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-
-            {/* If pending: Approve & Reject */}
+            {/* When Pending: Approve & Reject ONLY */}
             {isPending && (
               <>
                 <button
@@ -141,7 +187,7 @@ function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdC
                   onClick={() => onApprove(member)}
                   title="Approve Member"
                   aria-label="Approve Member"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 transition-all hover:bg-emerald-50 active:scale-95 shadow-2xs"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 transition-all hover:bg-emerald-50 active:scale-95 shadow-2xs cursor-pointer"
                 >
                   <Check className="h-4 w-4 stroke-[2.5]" />
                 </button>
@@ -151,11 +197,24 @@ function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdC
                   onClick={() => onReject(member)}
                   title="Reject Member"
                   aria-label="Reject Member"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-400 bg-white text-red-500 transition-all hover:bg-red-50 active:scale-95 shadow-2xs"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-400 bg-white text-red-500 transition-all hover:bg-red-50 active:scale-95 shadow-2xs cursor-pointer"
                 >
                   <X className="h-4 w-4 stroke-[2.5]" />
                 </button>
               </>
+            )}
+
+            {/* When Rejected: Delete */}
+            {!isApproved && !isPending && onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(member)}
+                title="Delete Member"
+                aria-label="Delete Member"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/70 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 active:scale-95 shadow-2xs cursor-pointer"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             )}
           </div>
         </div>
@@ -215,8 +274,41 @@ function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdC
         </div>
 
         {/* 3. Status Column (2 cols) */}
-        <div className="col-span-2 flex items-center">
-          <Badge status={member.status} />
+        <div className="col-span-2 flex items-center justify-center">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isActive}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onToggleActive) onToggleActive(member, !isActive);
+            }}
+            title={isActive ? 'Status: Active (Click to make Inactive)' : 'Status: Inactive (Click to make Active)'}
+            className="inline-flex items-center gap-2.5 cursor-pointer focus:outline-none select-none transition-opacity active:opacity-80"
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
+                  isActive ? 'translate-x-5' : 'translate-x-0'
+                )}
+              />
+            </span>
+            <span
+              className={cn(
+                'text-sm font-medium transition-colors select-none',
+                isActive ? 'text-[#2832A4]' : 'text-slate-400'
+              )}
+            >
+              {isActive ? 'Active' : 'Inactive'}
+            </span>
+          </button>
         </div>
 
         {/* 4. Actions Column (3 cols - fits all 5 buttons on one single row) */}
@@ -232,34 +324,74 @@ function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdC
             <Eye className="h-4 w-4" />
           </button>
 
-          {/* Member ID Card Icon Button - Visible only when Approved */}
-          {isApproved && onIdCard && (
-            <button
-              type="button"
-              onClick={() => onIdCard(member)}
-              title="View ID Card"
-              aria-label="View ID Card"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50/60 text-[#1E2B8F] transition-all hover:bg-indigo-100 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer"
-            >
-              <CreditCard className="h-4 w-4" />
-            </button>
+          {/* When Approved: ID Card, Edit, Delete */}
+          {isApproved && (
+            <>
+              {onIdCard && (
+                <button
+                  type="button"
+                  onClick={() => onIdCard(member)}
+                  title="View ID Card"
+                  aria-label="View ID Card"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50/60 text-[#1E2B8F] transition-all hover:bg-indigo-100 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer"
+                >
+                  <CreditCard className="h-4 w-4" />
+                </button>
+              )}
+
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(member)}
+                  title="Edit Member"
+                  aria-label="Edit Member"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-all hover:border-brand-500 hover:text-brand-600 hover:bg-slate-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-100 cursor-pointer"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(member)}
+                  title="Delete Member"
+                  aria-label="Delete Member"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/60 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </>
           )}
 
-          {/* Edit Member Icon Button */}
-          {onEdit && (
-            <button
-              type="button"
-              onClick={() => onEdit(member)}
-              title="Edit Member"
-              aria-label="Edit Member"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-all hover:border-brand-500 hover:text-brand-600 hover:bg-slate-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-100 cursor-pointer"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
+          {/* When Pending: Approve & Reject ONLY */}
+          {isPending && (
+            <>
+              <button
+                type="button"
+                onClick={() => onApprove(member)}
+                title="Approve Member"
+                aria-label="Approve Member"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 transition-all hover:bg-emerald-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-100 cursor-pointer"
+              >
+                <Check className="h-4 w-4 stroke-[2.5]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onReject(member)}
+                title="Reject Member"
+                aria-label="Reject Member"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-red-400 bg-white text-red-500 transition-all hover:bg-red-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"
+              >
+                <X className="h-4 w-4 stroke-[2.5]" />
+              </button>
+            </>
           )}
 
-          {/* Delete Member Icon Button */}
-          {onDelete && (
+          {/* When Rejected: Delete */}
+          {!isApproved && !isPending && onDelete && (
             <button
               type="button"
               onClick={() => onDelete(member)}
@@ -269,32 +401,6 @@ function MemberRowComponent({ member, onView, onEdit, onApprove, onReject, onIdC
             >
               <Trash2 className="h-4 w-4" />
             </button>
-          )}
-
-          {isPending && (
-            <>
-              {/* Approve / Accept Icon Button */}
-              <button
-                type="button"
-                onClick={() => onApprove(member)}
-                title="Approve Member"
-                aria-label="Approve Member"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 transition-all hover:bg-emerald-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-              >
-                <Check className="h-4 w-4 stroke-[2.5]" />
-              </button>
-
-              {/* Reject Icon Button */}
-              <button
-                type="button"
-                onClick={() => onReject(member)}
-                title="Reject Member"
-                aria-label="Reject Member"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-red-400 bg-white text-red-500 transition-all hover:bg-red-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100"
-              >
-                <X className="h-4 w-4 stroke-[2.5]" />
-              </button>
-            </>
           )}
         </div>
       </div>

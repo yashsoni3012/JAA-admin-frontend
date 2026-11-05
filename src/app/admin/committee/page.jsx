@@ -217,48 +217,40 @@ export default function CommitteePage() {
 
       {/* Main Committee Card */}
       <section className="rounded-3xl border border-white bg-white p-6 md:p-8 shadow-card space-y-6 relative">
-        {/* Top Header Row */}
+        {/* Search Bar & Add Position Button in ONE Equal Line */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight">
-              Committee
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Manage committee positions, roles, and assign association members.
-            </p>
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-lg">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by position or member name..."
+              className="h-10 w-full rounded-full border border-slate-200 bg-white pl-11 pr-10 text-xs sm:text-sm text-ink placeholder:text-slate-400 shadow-xs focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full transition"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
+          {/* Add Position Button with equal h-10 height */}
           <Button
             type="button"
             variant="primary"
             onClick={() => setIsAddPositionOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-xs sm:text-sm font-bold shadow-md shadow-[#2832A4]/25 shrink-0"
+            className="h-10 inline-flex items-center gap-2 rounded-full px-6 text-xs sm:text-sm font-bold shadow-md shadow-[#2832A4]/25 shrink-0 self-end sm:self-auto"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>Add Position</span>
           </Button>
-        </div>
-
-        {/* Search Bar */}
-        <div className="relative max-w-lg">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by position or member name..."
-            className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-11 pr-10 text-xs sm:text-sm text-ink placeholder:text-slate-400 shadow-xs focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full transition"
-              title="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
         </div>
 
         {/* Positions Accordion List */}

@@ -1,7 +1,11 @@
+import apiClient from '@/lib/axios';
+
 const LOGIN_API_URL =
   process.env.NEXT_PUBLIC_LOGIN_API_URL || 'http://localhost:5000/api/admin/login';
 const LOGOUT_API_URL =
   process.env.NEXT_PUBLIC_LOGOUT_API_URL || 'http://localhost:5000/api/admin/logout';
+const PROFILE_API_URL =
+  process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:5000/api/admin/profile';
 const FORGET_PASSWORD_API_URL =
   process.env.NEXT_PUBLIC_FORGET_PASSWORD_API_URL || 'http://localhost:5000/api/admin/forget-password';
 const RESET_PASSWORD_API_URL =
@@ -11,14 +15,30 @@ const VERIFY_RESET_TOKEN_API_URL =
 const CHANGE_PASSWORD_API_URL =
   process.env.NEXT_PUBLIC_CHANGE_PASSWORD_API_URL || 'http://localhost:5000/api/admin/change-password';
 
-
-
-export const SESSION_KEY = 'jaa_admin_session';
+export const USER_KEY = 'jaa_admin_user';
+export const SESSION_KEY = 'jaa_admin_user';
 export const TOKEN_KEY = 'token';
 
 /**
- * Admin Login: Authenticates with http://localhost:5000/api/admin/login
- * @param {Object} credentials - { email, password }
+ * Remove all legacy tokens and authentication keys from localStorage.
+ * Cookie-based authentication stores the JWT in an HTTP-only Cookie.
+ */
+export function purgeLocalTokens() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem('token');
+    window.localStorage.removeItem('jwt');
+    window.localStorage.removeItem('accessToken');
+    window.localStorage.removeItem('refreshToken');
+    window.localStorage.removeItem('jaa_demo_session');
+    window.localStorage.removeItem('jaa_admin_session');
+  } catch {}
+}
+
+/**
+ * Admin Login: Authenticates with backend API.
+ * The backend sets the JWT into an HTTP-only Cookie.
+ * Frontend Axios sends withCredentials: true.
  */
 export async function adminLogin({ email, password }) {
   if (!email || !password) {
@@ -31,110 +51,73 @@ export async function adminLogin({ email, password }) {
   };
 
   try {
-    const response = await fetch(LOGIN_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+    purgeLocalTokens();
+
+    const response = await apiClient.post(LOGIN_API_URL, payload, {
+      withCredentials: true,
     });
 
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || !data.success) {
-      const errorMsg =
-        data.message ||
-        (Array.isArray(data.errors) && data.errors[0]?.message) ||
-        'Invalid email or password.';
-      throw new Error(errorMsg);
+    const data = response.data;
+    if (!data.success) {
+      throw new Error(data.message || 'Invalid email or password.');
     }
 
-    const token = data.token;
     const user = {
-      id: data.data?.id,
+      id: data.data?.id || data.data?._id,
       name: data.data?.fullName || data.data?.name || 'Admin',
       email: data.data?.email || payload.email,
       role: data.data?.role || 'Admin',
       avatar: data.data?.avatar || data.data?.profilePhoto || null,
     };
 
-    const session = { user, token };
-
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      window.localStorage.setItem(TOKEN_KEY, token);
-      // Clean up legacy keys
-      window.localStorage.removeItem('jaa_demo_session');
+      window.localStorage.setItem(USER_KEY, JSON.stringify(user));
     }
 
-    return session;
+    return { user };
   } catch (error) {
-    console.error('adminLogin error:', error);
-    throw error;
+    const errorMsg =
+      error.response?.data?.message ||
+      (Array.isArray(error.response?.data?.errors) && error.response?.data?.errors[0]?.message) ||
+      error.message ||
+      'Invalid email or password.';
+    throw new Error(errorMsg);
   }
 }
 
 /**
- * Admin Logout: Notifies backend http://localhost:5000/api/admin/logout and clears session
+ * Admin Logout: Calls backend Logout API with withCredentials: true
+ * Backend clears the cookie; frontend removes local user profile state.
  */
 export async function adminLogout() {
-  let token = null;
-
-  if (typeof window !== 'undefined') {
-    token =
-      window.localStorage.getItem(TOKEN_KEY) ||
-      (() => {
-        try {
-          const raw = window.localStorage.getItem(SESSION_KEY);
-          return raw ? JSON.parse(raw)?.token : null;
-        } catch {
-          return null;
-        }
-      })();
-  }
-
   try {
-    if (token) {
-      await fetch(LOGOUT_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ token }),
-      }).catch((err) => {
-        console.warn('Backend logout notification warning:', err.message);
-      });
-    }
+    await apiClient.post(LOGOUT_API_URL, {}, { withCredentials: true }).catch(() => {});
   } catch (err) {
-    console.warn('Logout network error:', err);
+    console.warn('Logout network notification notice:', err.message);
   } finally {
+    purgeLocalTokens();
     if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(SESSION_KEY);
-      window.localStorage.removeItem(TOKEN_KEY);
-      window.localStorage.removeItem('jwt');
-      window.localStorage.removeItem('accessToken');
-      window.localStorage.removeItem('jaa_demo_session');
+      window.localStorage.removeItem(USER_KEY);
     }
   }
 }
 
 /**
- * Returns current authenticated admin session from localStorage
+ * Returns currently cached admin user profile from localStorage for immediate UI render
  */
 export function getAuthSession() {
   if (typeof window === 'undefined') return null;
 
   try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
+    const raw =
+      window.localStorage.getItem(USER_KEY) ||
+      window.localStorage.getItem('jaa_admin_session');
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
-    if (parsed?.user && (parsed?.token || window.localStorage.getItem(TOKEN_KEY))) {
-      return {
-        user: parsed.user,
-        token: parsed.token || window.localStorage.getItem(TOKEN_KEY),
-      };
+    const user = parsed?.user || parsed;
+    if (user && (user.email || user.name)) {
+      return { user };
     }
     return null;
   } catch {
@@ -143,8 +126,44 @@ export function getAuthSession() {
 }
 
 /**
+ * Verifies active cookie-based session with backend GET /api/admin/profile
+ * Browser automatically sends the HTTP-only cookie with withCredentials: true.
+ */
+export async function verifyAuthSession() {
+  try {
+    const response = await apiClient.get(PROFILE_API_URL, {
+      withCredentials: true,
+    });
+
+    if (response.data?.success && response.data?.data) {
+      const u = response.data.data;
+      const user = {
+        id: u.id || u._id,
+        name: u.fullName || u.name || 'Admin',
+        email: u.email,
+        role: u.role || 'Admin',
+        avatar: u.avatar || u.profilePhoto || null,
+      };
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+      }
+      return user;
+    }
+    return null;
+  } catch (err) {
+    if (err.response?.status === 401) {
+      purgeLocalTokens();
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(USER_KEY);
+      }
+    }
+    return null;
+  }
+}
+
+/**
  * Admin Forgot Password: Requests a password reset link/token
- * @param {string} email
  */
 export async function adminForgotPassword(email) {
   if (!email || !email.trim()) {
@@ -156,40 +175,32 @@ export async function adminForgotPassword(email) {
   };
 
   try {
-    const response = await fetch(FORGET_PASSWORD_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+    const response = await apiClient.post(FORGET_PASSWORD_API_URL, payload, {
+      withCredentials: true,
     });
 
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || !data.success) {
-      const errorMsg =
-        data.message ||
-        (Array.isArray(data.errors) && data.errors[0]?.message) ||
-        'Unable to process password reset request.';
-      throw new Error(errorMsg);
+    const data = response.data;
+    if (!data.success) {
+      throw new Error(data.message || 'Unable to process password reset request.');
     }
-
-    const resetToken = data.resetToken || response.headers.get('x-reset-token') || null;
 
     return {
       success: true,
       message: data.message || 'If an account exists with this email, a password reset link will be sent.',
-      resetToken,
+      resetToken: data.resetToken || response.headers?.['x-reset-token'] || null,
     };
   } catch (error) {
-    console.error('adminForgotPassword error:', error);
-    throw error;
+    const errorMsg =
+      error.response?.data?.message ||
+      (Array.isArray(error.response?.data?.errors) && error.response?.data?.errors[0]?.message) ||
+      error.message ||
+      'Unable to process password reset request.';
+    throw new Error(errorMsg);
   }
 }
 
 /**
  * Admin Reset Password: Submits new password with token
- * @param {Object} params - { token, newPassword, confirmPassword, email }
  */
 export async function adminResetPassword({ token, newPassword, confirmPassword, email }) {
   if (!token) {
@@ -210,22 +221,13 @@ export async function adminResetPassword({ token, newPassword, confirmPassword, 
   };
 
   try {
-    const response = await fetch(RESET_PASSWORD_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+    const response = await apiClient.post(RESET_PASSWORD_API_URL, payload, {
+      withCredentials: true,
     });
 
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || !data.success) {
-      const errorMsg =
-        data.message ||
-        (Array.isArray(data.errors) && data.errors[0]?.message) ||
-        'Failed to reset password. The link or token may have expired.';
-      throw new Error(errorMsg);
+    const data = response.data;
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to reset password.');
     }
 
     return {
@@ -233,14 +235,17 @@ export async function adminResetPassword({ token, newPassword, confirmPassword, 
       message: data.message || 'Password reset successfully.',
     };
   } catch (error) {
-    console.error('adminResetPassword error:', error);
-    throw error;
+    const errorMsg =
+      error.response?.data?.message ||
+      (Array.isArray(error.response?.data?.errors) && error.response?.data?.errors[0]?.message) ||
+      error.message ||
+      'Failed to reset password. The link or token may have expired.';
+    throw new Error(errorMsg);
   }
 }
 
 /**
  * Admin Verify Reset Token: Look up token validity & associated email
- * @param {string} token
  */
 export async function adminVerifyResetToken(token) {
   if (!token) {
@@ -248,16 +253,13 @@ export async function adminVerifyResetToken(token) {
   }
 
   try {
-    const response = await fetch(`${VERIFY_RESET_TOKEN_API_URL}?token=${encodeURIComponent(token.trim())}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await apiClient.get(
+      `${VERIFY_RESET_TOKEN_API_URL}?token=${encodeURIComponent(token.trim())}`,
+      { withCredentials: true }
+    );
 
-    const data = await response.json().catch(() => ({}));
-
-    if (response.ok && data.success) {
+    const data = response.data;
+    if (data.success) {
       return {
         valid: data.valid !== false,
         email: data.email || '',
@@ -269,15 +271,12 @@ export async function adminVerifyResetToken(token) {
       message: data.message || 'Invalid or expired token',
     };
   } catch (error) {
-    console.error('adminVerifyResetToken error:', error);
     return { valid: false, error: error.message };
   }
 }
 
 /**
  * Admin Change Password: Updates password while authenticated
- * Endpoint: POST http://localhost:5000/api/admin/change-password
- * @param {Object} params - { currentPassword, newPassword, confirmPassword }
  */
 export async function adminChangePassword({ currentPassword, newPassword, confirmPassword }) {
   if (!currentPassword) {
@@ -293,20 +292,6 @@ export async function adminChangePassword({ currentPassword, newPassword, confir
     throw new Error('New password and confirm password do not match.');
   }
 
-  let token = null;
-  if (typeof window !== 'undefined') {
-    token =
-      window.localStorage.getItem(TOKEN_KEY) ||
-      (() => {
-        try {
-          const raw = window.localStorage.getItem(SESSION_KEY);
-          return raw ? JSON.parse(raw)?.token : null;
-        } catch {
-          return null;
-        }
-      })();
-  }
-
   const payload = {
     currentPassword: currentPassword.trim(),
     newPassword: newPassword.trim(),
@@ -315,23 +300,13 @@ export async function adminChangePassword({ currentPassword, newPassword, confir
   };
 
   try {
-    const response = await fetch(CHANGE_PASSWORD_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
+    const response = await apiClient.post(CHANGE_PASSWORD_API_URL, payload, {
+      withCredentials: true,
     });
 
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || !data.success) {
-      const errorMsg =
-        data.message ||
-        (Array.isArray(data.errors) && data.errors[0]?.message) ||
-        'Failed to change password.';
-      throw new Error(errorMsg);
+    const data = response.data;
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to change password.');
     }
 
     return {
@@ -339,9 +314,11 @@ export async function adminChangePassword({ currentPassword, newPassword, confir
       message: data.message || 'Password changed successfully.',
     };
   } catch (error) {
-    console.error('adminChangePassword error:', error);
-    throw error;
+    const errorMsg =
+      error.response?.data?.message ||
+      (Array.isArray(error.response?.data?.errors) && error.response?.data?.errors[0]?.message) ||
+      error.message ||
+      'Failed to change password.';
+    throw new Error(errorMsg);
   }
 }
-
-

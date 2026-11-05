@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   X,
 } from 'lucide-react';
-import { getMembers, createMember, updateMemberStatus, updateMember, deleteMember } from '@/services/admin.service';
+import { getMembers, createMember, updateMemberStatus, updateMember, deleteMember, toggleMemberActive } from '@/services/admin.service';
 import Button from '@/components/common/Button';
 import { TableSkeleton } from '@/components/common/Skeleton';
 import { cn } from '@/lib/utils';
@@ -72,6 +72,7 @@ const PAGE_SIZES = [10, 20, 50];
 export default function MembersPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('All');
+  const [activityFilter, setActivityFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -100,13 +101,14 @@ export default function MembersPage() {
     isLoading,
     isFetching,
   } = useQuery({
-    queryKey: ['members', { page, pageSize, activeTab, debouncedSearch }],
+    queryKey: ['members', { page, pageSize, activeTab, debouncedSearch, activityFilter }],
     queryFn: () =>
       getMembers({
         page,
         limit: pageSize,
         status: activeTab,
         search: debouncedSearch,
+        isActive: activityFilter === 'all' ? undefined : (activityFilter === 'active'),
       }),
     placeholderData: (previousData) => previousData,
     staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
@@ -178,6 +180,25 @@ export default function MembersPage() {
     if (tab === activeTab) return;
     setActiveTab(tab);
     setPage(1);
+  };
+
+  const changeActivityFilter = (filter) => {
+    if (filter === activityFilter) return;
+    setActivityFilter(filter);
+    setPage(1);
+  };
+
+  const handleToggleActive = async (member, nextActive) => {
+    try {
+      await toggleMemberActive(member.id, nextActive);
+      setToast(`Member "${member.name}" marked as ${nextActive ? 'Active' : 'Inactive'}.`);
+      setTimeout(() => setToast(null), 4000);
+      invalidateMemberData();
+    } catch (err) {
+      console.error('Error toggling member active status:', err);
+      setToast(err.message || 'Failed to update member activity status');
+      setTimeout(() => setToast(null), 4000);
+    }
   };
 
   const changeSearch = (value) => {
@@ -256,28 +277,56 @@ export default function MembersPage() {
 
   return (
     <section className="rounded-2xl border border-white bg-white shadow-card sm:rounded-3xl overflow-hidden">
-      {/* Header: title + actions (Responsive across mobile, tablet, desktop) */}
-      <div className="flex flex-col gap-3.5 px-4 pb-4 pt-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pt-6">
-        <div>
-          <h2 className="text-lg sm:text-xl font-bold text-ink">Members</h2>
-          <p className="text-xs text-slate-400 mt-0.5 sm:hidden">
-            {totalItems} total registered members
-          </p>
+      {/* Filter Tabs + Action Buttons in Equal Line */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 px-4 pt-5 sm:px-6 sm:pt-6">
+        {/* Status tabs (Filterations) */}
+        <div
+          role="tablist"
+          aria-label="Filter members by status"
+          className="no-scrollbar flex gap-4 sm:gap-7 overflow-x-auto"
+        >
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                role="tab"
+                type="button"
+                aria-selected={isActive}
+                onClick={() => changeTab(tab)}
+                className={cn(
+                  'relative shrink-0 pb-3 sm:pb-3.5 text-xs sm:text-sm font-medium transition cursor-pointer select-none',
+                  isActive ? 'font-bold text-brand-500' : 'text-slate-500 hover:text-ink'
+                )}
+              >
+                <span>{tab}</span>
+                <span className={cn(
+                  'ml-1.5 inline-block text-[11px] sm:text-xs px-1.5 py-0.5 rounded-full font-semibold',
+                  isActive ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-500'
+                )}>
+                  {countFor(tab)}
+                </span>
+                {isActive && (
+                  <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand-500" />
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Action Buttons: side-by-side grid on mobile, auto-width row on tablet/desktop */}
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
+        {/* Action Buttons: Import & Add Member with equal height */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 pb-3 self-end sm:self-auto">
           <Button
             variant="outline"
             onClick={() => setIsImportOpen(true)}
-            className="w-full sm:w-auto justify-center rounded-full px-4 sm:px-6 text-xs sm:text-sm py-2 sm:py-2.5 cursor-pointer hover:bg-slate-50 transition"
+            className="h-10 justify-center rounded-full px-4 sm:px-6 text-xs sm:text-sm font-semibold cursor-pointer hover:bg-slate-50 transition"
           >
             <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
             <span>Import</span>
           </Button>
           <Button
             variant="primary"
-            className="w-full sm:w-auto justify-center rounded-full px-4 sm:px-6 text-xs sm:text-sm py-2 sm:py-2.5 shadow-md shadow-brand-500/20 cursor-pointer"
+            className="h-10 justify-center rounded-full px-4 sm:px-6 text-xs sm:text-sm font-semibold shadow-md shadow-brand-500/20 cursor-pointer"
             onClick={() => setIsAddOpen(true)}
           >
             <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
@@ -286,43 +335,8 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* Status tabs (Touch scroll on mobile with hidden scrollbar) */}
-      <div
-        role="tablist"
-        aria-label="Filter members by status"
-        className="no-scrollbar flex gap-4 sm:gap-7 overflow-x-auto border-b border-slate-100 px-4 sm:px-6"
-      >
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab;
-          return (
-            <button
-              key={tab}
-              role="tab"
-              type="button"
-              aria-selected={isActive}
-              onClick={() => changeTab(tab)}
-              className={cn(
-                'relative shrink-0 pb-3 sm:pb-3.5 text-xs sm:text-sm font-medium transition cursor-pointer select-none',
-                isActive ? 'font-bold text-brand-500' : 'text-slate-500 hover:text-ink'
-              )}
-            >
-              <span>{tab}</span>
-              <span className={cn(
-                'ml-1.5 inline-block text-[11px] sm:text-xs px-1.5 py-0.5 rounded-full font-semibold',
-                isActive ? 'bg-brand-50 text-brand-600' : 'bg-slate-100 text-slate-500'
-              )}>
-                {countFor(tab)}
-              </span>
-              {isActive && (
-                <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand-500" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Search Bar */}
-      <div className="px-4 py-3.5 sm:px-6 sm:py-4">
+      {/* Search Bar + Activity Filter */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4">
         <label className="relative block w-full max-w-xl">
           <span className="sr-only">Search members</span>
           <Search
@@ -337,6 +351,59 @@ export default function MembersPage() {
             className="w-full rounded-full border border-slate-200 bg-white py-2.5 sm:py-3 pl-11 pr-4 text-xs sm:text-sm text-ink placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100 transition shadow-2xs"
           />
         </label>
+
+        {/* Activity Filter: All | Active | Inactive */}
+        <div className="flex items-center gap-1.5 self-start lg:self-auto shrink-0 bg-slate-100/80 p-1 rounded-full border border-slate-200/80">
+          <span className="text-[11px] font-bold text-slate-500 pl-2.5 pr-1">Activity:</span>
+          <button
+            type="button"
+            onClick={() => changeActivityFilter('all')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer select-none',
+              activityFilter === 'all'
+                ? 'bg-white text-ink shadow-xs'
+                : 'text-slate-600 hover:text-ink'
+            )}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => changeActivityFilter('active')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer select-none flex items-center gap-1.5',
+              activityFilter === 'active'
+                ? 'bg-emerald-500 text-white shadow-xs'
+                : 'text-slate-600 hover:text-emerald-600'
+            )}
+          >
+            <span className={cn('h-2 w-2 rounded-full', activityFilter === 'active' ? 'bg-white' : 'bg-emerald-500')} />
+            <span>Active</span>
+            {counts.active !== undefined && (
+              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-bold', activityFilter === 'active' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600')}>
+                {counts.active}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => changeActivityFilter('inactive')}
+            className={cn(
+              'rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer select-none flex items-center gap-1.5',
+              activityFilter === 'inactive'
+                ? 'bg-slate-700 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            )}
+          >
+            <span className={cn('h-2 w-2 rounded-full', activityFilter === 'inactive' ? 'bg-white' : 'bg-slate-400')} />
+            <span>Inactive</span>
+            {counts.inactive !== undefined && (
+              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-bold', activityFilter === 'inactive' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-600')}>
+                {counts.inactive}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Table & List Wrapper */}
@@ -345,7 +412,7 @@ export default function MembersPage() {
         <div className="hidden md:grid grid-cols-12 gap-4 border-t border-b border-slate-100 bg-[#F8FAFC] px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
           <div className="col-span-4">Member</div>
           <div className="col-span-3">Contact Info</div>
-          <div className="col-span-2">Status</div>
+          <div className="col-span-2 text-center">STATUS</div>
           <div className="col-span-3 text-right">Actions</div>
         </div>
 
@@ -380,6 +447,7 @@ export default function MembersPage() {
                   onApprove={handleApprove}
                   onReject={(m) => setRejectingMember(m)}
                   onDelete={(m) => setDeletingMember(m)}
+                  onToggleActive={handleToggleActive}
                 />
               </Suspense>
             ))}

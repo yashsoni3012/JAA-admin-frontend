@@ -207,23 +207,7 @@ export default function LeadsPage() {
     <div className="space-y-6">
       {/* MAIN CONTAINER MATCHING IMAGE 1 */}
       <section className="rounded-3xl border border-white bg-white p-6 md:p-8 shadow-card space-y-6">
-        {/* Title on Left + Export CSV Button on Right */}
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl md:text-2xl font-bold text-[#1B1F3B] tracking-tight">
-            Leads
-          </h2>
-
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            className="inline-flex items-center gap-2 rounded-full bg-[#E02B20] hover:bg-[#c9241a] text-white px-5 py-2.5 text-xs md:text-sm font-semibold shadow-md shadow-red-500/20 transition cursor-pointer active:scale-95 shrink-0"
-          >
-            <ArrowDownCircle className="h-4 w-4" />
-            <span>Export CSV</span>
-          </button>
-        </div>
-
-        {/* CONTROLS BAR: Search Input */}
+        {/* Search Bar & Export CSV Button in ONE Equal Line */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Search Bar */}
           <div className="relative flex-1 max-w-md">
@@ -233,9 +217,19 @@ export default function LeadsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by title, description, source, member..."
-              className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-ink placeholder:text-slate-400 shadow-xs focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition"
+              className="h-10 w-full rounded-full border border-slate-200 bg-white pl-11 pr-4 text-xs sm:text-sm text-ink placeholder:text-slate-400 shadow-xs focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition"
             />
           </div>
+
+          {/* Export CSV Button with equal h-10 height */}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="h-10 inline-flex items-center gap-2 rounded-full bg-[#E02B20] hover:bg-[#c9241a] text-white px-5 text-xs sm:text-sm font-semibold shadow-md shadow-red-500/20 transition cursor-pointer active:scale-95 shrink-0 self-end sm:self-auto"
+          >
+            <ArrowDownCircle className="h-4 w-4" />
+            <span>Export CSV</span>
+          </button>
         </div>
 
         {/* LEADS TABLE */}

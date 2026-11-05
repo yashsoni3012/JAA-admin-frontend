@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Eye, EyeOff } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,9 @@ const INITIAL_FORM = {
   businessName: '',
   mobile: '',
   email: '',
+  password: '',
   businessType: '',
+  isActive: true,
   address: '',
   profileImage: null,
   imagePreview: '',
@@ -23,8 +25,10 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [imageError, setImageError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const fileInputRef = useRef(null);
+  const passwordRef = useRef(null);
   const fullNameRef = useRef(null);
   const businessNameRef = useRef(null);
   const mobileRef = useRef(null);
@@ -41,6 +45,7 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
       setImageError('');
       setIsSubmitting(false);
       setIsDragging(false);
+      setShowPassword(false);
     }
   }, [open]);
 
@@ -69,6 +74,10 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
         if (!value.trim()) return 'Business type is required';
         if (value.trim().length < 2) return 'Business type must be at least 2 characters';
         return '';
+      case 'password':
+        if (!value || !value.trim()) return 'Password is required and must be at least 6 characters';
+        if (value.trim().length < 6) return 'Password must be at least 6 characters';
+        return '';
       case 'address':
         if (!value.trim()) return 'Address is required';
         if (value.trim().length < 5) return 'Address must be at least 5 characters';
@@ -80,7 +89,7 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
 
   const validateAll = () => {
     const newErrors = {};
-    const fieldOrder = ['fullName', 'email', 'address', 'businessName', 'mobile', 'businessType'];
+    const fieldOrder = ['fullName', 'email', 'address', 'businessName', 'mobile', 'businessType', 'password'];
 
     fieldOrder.forEach((field) => {
       const err = validateField(field, formData[field]);
@@ -192,6 +201,7 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
       mobile: true,
       email: true,
       businessType: true,
+      password: true,
       address: true,
     };
     setTouched(allTouched);
@@ -207,6 +217,7 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
       else if (validationErrors.businessName && businessNameRef.current) businessNameRef.current.focus();
       else if (validationErrors.mobile && mobileRef.current) mobileRef.current.focus();
       else if (validationErrors.businessType && businessTypeRef.current) businessTypeRef.current.focus();
+      else if (validationErrors.password && passwordRef.current) passwordRef.current.focus();
       return;
     }
 
@@ -220,13 +231,15 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
         business: formData.businessName.trim(),
         mobile: formData.mobile.trim(),
         email: formData.email.trim(),
+        password: formData.password.trim(),
         businessType: formData.businessType.trim(),
         address: formData.address.trim(),
         country: 'India',
         city: 'Ahmedabad',
         avatar: formData.imagePreview || null,
         profileImage: formData.profileImage,
-        status: 'Pending',
+        status: formData.isActive ? 'Approved' : 'Pending',
+        isActive: Boolean(formData.isActive),
         joinedOn: new Date().toISOString().split('T')[0],
       };
 
@@ -512,6 +525,82 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
                 <p className="mt-1.5 text-xs font-medium text-red-500">{errors.businessType}</p>
               )}
             </div>
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-semibold text-ink mb-1.5">
+                Password <span className="text-red-500 font-bold">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  ref={passwordRef}
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  onBlur={() => handleBlur('password')}
+                  placeholder="Enter password (min. 6 characters)"
+                  autoComplete="new-password"
+                  className={cn(
+                    'w-full rounded-xl border bg-white px-4 py-3 pr-11 text-sm text-ink placeholder:text-slate-400 transition',
+                    errors.password && touched.password
+                      ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                      : 'border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 focus:outline-none'
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && touched.password && (
+                <p className="mt-1.5 text-xs font-medium text-red-500">{errors.password}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Active / Inactive Status Switch */}
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <span className="block text-sm font-semibold text-ink">Member Activity Status</span>
+              <span className="block text-xs text-slate-500 mt-0.5">
+                {formData.isActive
+                  ? 'Active — Member account is active and enabled'
+                  : 'Inactive — Member account is deactivated and suspended'}
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(formData.isActive)}
+              onClick={() => handleChange('isActive', !formData.isActive)}
+              className="inline-flex items-center gap-2.5 cursor-pointer focus:outline-none select-none shrink-0 transition-opacity active:opacity-80"
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                  formData.isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
+                    formData.isActive ? 'translate-x-5' : 'translate-x-0'
+                  )}
+                />
+              </span>
+              <span className={cn('text-sm font-medium w-16 text-left select-none', formData.isActive ? 'text-[#2832A4]' : 'text-slate-400')}>
+                {formData.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </button>
           </div>
         </div>
 

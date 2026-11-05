@@ -1,33 +1,48 @@
 'use client';
 
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { adminLogin, adminLogout, getAuthSession } from '@/services/auth.service';
+import { adminLogin, adminLogout, getAuthSession, verifyAuthSession } from '@/services/auth.service';
 
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore the session after mount
+  // Restore and verify cookie-based session after mount
   useEffect(() => {
-    try {
-      const session = getAuthSession();
-      if (session?.user && session?.token) {
-        setUser(session.user);
-        setToken(session.token);
-      } else {
-        setUser(null);
-        setToken(null);
+    let isMounted = true;
+
+    async function checkAuth() {
+      try {
+        // 1. Set cached user profile if present for immediate UI display without flashing
+        const cached = getAuthSession();
+        if (cached?.user && isMounted) {
+          setUser(cached.user);
+        }
+
+        // 2. Verify active HTTP-only cookie with backend
+        const verifiedUser = await verifyAuthSession();
+        if (isMounted) {
+          if (verifiedUser) {
+            setUser(verifiedUser);
+          } else {
+            setUser(null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to verify cookie auth session:', err);
+        if (isMounted) setUser(null);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to restore auth session:', err);
-      setUser(null);
-      setToken(null);
-    } finally {
-      setIsLoading(false);
     }
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback(async (credentials) => {
@@ -35,7 +50,6 @@ export function AuthProvider({ children }) {
     try {
       const session = await adminLogin(credentials);
       setUser(session.user);
-      setToken(session.token);
       return session;
     } finally {
       setIsLoading(false);
@@ -48,7 +62,6 @@ export function AuthProvider({ children }) {
       await adminLogout();
     } finally {
       setUser(null);
-      setToken(null);
       setIsLoading(false);
     }
   }, []);
@@ -59,12 +72,7 @@ export function AuthProvider({ children }) {
       const nextUser = { ...prev, ...updatedData };
       if (typeof window !== 'undefined') {
         try {
-          const raw = window.localStorage.getItem('jaa_admin_session');
-          if (raw) {
-            const session = JSON.parse(raw);
-            session.user = nextUser;
-            window.localStorage.setItem('jaa_admin_session', JSON.stringify(session));
-          }
+          window.localStorage.setItem('jaa_admin_user', JSON.stringify(nextUser));
         } catch {}
       }
       return nextUser;
@@ -74,16 +82,14 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       user,
-      token,
-      isAuthenticated: Boolean(user && token),
+      isAuthenticated: Boolean(user),
       isLoading,
       login,
       logout,
       updateUser,
     }),
-    [user, token, isLoading, login, logout, updateUser]
+    [user, isLoading, login, logout, updateUser]
   );
-
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

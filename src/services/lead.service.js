@@ -7,25 +7,7 @@ const SERVER_URL =
  * Retrieve auth token from storage with graceful fallback
  */
 export function getAuthToken() {
-  if (typeof window === 'undefined') return 'mock-jwt-token-JAA-admin';
-  try {
-    const directToken =
-      window.localStorage.getItem('token') ||
-      window.localStorage.getItem('jwt') ||
-      window.localStorage.getItem('accessToken');
-    if (directToken) return directToken;
-
-    const sessionRaw =
-      window.localStorage.getItem('jaa_admin_session') ||
-      window.localStorage.getItem('jaa_demo_session');
-    if (sessionRaw) {
-      const parsed = JSON.parse(sessionRaw);
-      if (parsed?.token) return parsed.token;
-    }
-    return 'mock-jwt-token-JAA-admin';
-  } catch {
-    return 'mock-jwt-token-JAA-admin';
-  }
+  return '';
 }
 
 /**

@@ -155,15 +155,15 @@ function MessagesContent() {
 
   // Synchronize Top Header Title
   useEffect(() => {
-    let title = 'Messages';
+    let title = 'Broadcast Messages';
     if (activeModule === 'GROUP_MESSAGE') {
       if (groupView === 'LIST') {
-        title = 'Groups';
+        title = 'Group Messages';
       } else if (groupView === 'CREATE' || groupView === 'DETAILS') {
         title = 'Group Details';
       }
     } else {
-      title = 'Messages';
+      title = 'Broadcast Messages';
     }
 
     const timer = setTimeout(() => {

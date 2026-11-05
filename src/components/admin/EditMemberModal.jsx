@@ -51,6 +51,7 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
     address: '',
     membershipId: '',
     status: 'pending',
+    isActive: true,
     rejectionReason: '',
   });
 
@@ -73,6 +74,7 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
         address: member.address || '',
         membershipId: member.membershipId || `JBAD${150 + Number(member.id || 0)}`,
         status: (member.status || 'pending').toString().toLowerCase(),
+        isActive: member.isActive !== undefined ? Boolean(member.isActive) : ((member.status || '').toLowerCase() === 'approved' || (member.status || '').toLowerCase() === 'active'),
         rejectionReason: member.rejectionReason || member.reason || '',
       });
       setAvatarFile(null);
@@ -173,6 +175,7 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
         payload.append('address', formData.address.trim());
         payload.append('membershipId', formData.membershipId.trim());
         payload.append('status', formData.status.toLowerCase());
+        payload.append('isActive', formData.isActive ? 'true' : 'false');
         payload.append('rejectionReason', formData.status === 'rejected' ? formData.rejectionReason.trim() : '');
 
         updatedRecord = await updateMember(member.id, payload);
@@ -187,6 +190,7 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
           address: formData.address.trim(),
           membershipId: formData.membershipId.trim(),
           status: formData.status.toLowerCase(),
+          isActive: Boolean(formData.isActive),
           rejectionReason: formData.status === 'rejected' ? formData.rejectionReason.trim() : '',
           avatar: avatarPreview,
         };
@@ -288,6 +292,39 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
+          </div>
+
+          {/* Active / Inactive Switch */}
+          <div className="w-full sm:w-auto text-left">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Active Status
+            </label>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(formData.isActive)}
+              onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))}
+              title={formData.isActive ? 'Click to make Inactive' : 'Click to make Active'}
+              className="inline-flex items-center gap-2.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-ink shadow-xs hover:bg-slate-50 cursor-pointer focus:outline-none select-none"
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                  formData.isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
+                    formData.isActive ? 'translate-x-5' : 'translate-x-0'
+                  )}
+                />
+              </span>
+              <span className={cn('text-sm font-medium w-14 text-left select-none', formData.isActive ? 'text-[#2832A4]' : 'text-slate-400')}>
+                {formData.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </button>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import { DEMO_AUTH } from '@/config/demo-auth';
+import { resolveApiUrl } from '@/lib/api-resolver';
 
 const BASE_API_URL =
   process.env.NEXT_PUBLIC_MEMBERS_API_URL || 'http://localhost:5000/api/admin/members';
@@ -9,28 +10,10 @@ export const PROFILE_API_URL =
 
 
 /**
- * Get active auth token from local storage or fallback to development token
+ * In cookie-based authentication, the browser automatically sends HTTP-only cookies
  */
 export function getAuthToken() {
-  if (typeof window === 'undefined') return 'mock-jwt-token-JAA-admin';
-  try {
-    const directToken =
-      window.localStorage.getItem('token') ||
-      window.localStorage.getItem('jwt') ||
-      window.localStorage.getItem('accessToken');
-    if (directToken) return directToken;
-
-    const sessionRaw =
-      window.localStorage.getItem('jaa_admin_session') ||
-      window.localStorage.getItem('jaa_demo_session');
-    if (sessionRaw) {
-      const parsed = JSON.parse(sessionRaw);
-      if (parsed?.token) return parsed.token;
-    }
-    return 'mock-jwt-token-JAA-admin';
-  } catch {
-    return 'mock-jwt-token-JAA-admin';
-  }
+  return '';
 }
 
 /**
@@ -43,9 +26,9 @@ export function getAvatarUrl(avatar) {
     avatar.startsWith('https://') ||
     avatar.startsWith('data:')
   ) {
-    return avatar;
+    return resolveApiUrl(avatar);
   }
-  return `${SERVER_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`;
+  return resolveApiUrl(`${SERVER_URL}${avatar.startsWith('/') ? '' : '/'}${avatar}`);
 }
 
 /**
@@ -96,6 +79,7 @@ export function normalizeMember(member) {
     profilePhoto: getAvatarUrl(member.profilePhoto || member.image || member.avatar),
     status,
     rawStatus,
+    isActive: member.isActive !== undefined ? Boolean(member.isActive) : (rawStatus === 'approved' || rawStatus === 'active'),
     rejectionReason: member.rejectionReason || member.reason || '',
     idCard,
     createdAt: member.createdAt || '',
@@ -149,6 +133,10 @@ export async function getMembers(params = {}) {
     }
     if (params.search && params.search.trim()) {
       url.searchParams.set('search', params.search.trim());
+    }
+
+    if (params.isActive !== undefined && params.isActive !== 'all' && params.isActive !== '') {
+      url.searchParams.set('isActive', params.isActive.toString());
     }
 
     const token = getAuthToken();
@@ -289,9 +277,16 @@ export async function createMember(memberData) {
     formData.append('business', memberData.business || memberData.businessName);
     formData.append('mobile', memberData.mobile);
     formData.append('email', memberData.email);
+    if (memberData.password) {
+      formData.append('password', memberData.password);
+      formData.append('confirmPassword', memberData.confirmPassword || memberData.password);
+    }
     formData.append('address', memberData.address || '');
     formData.append('city', memberData.city || 'Ahmedabad');
     formData.append('businessType', memberData.businessType || 'Retailer');
+    if (memberData.isActive !== undefined) {
+      formData.append('isActive', Boolean(memberData.isActive).toString());
+    }
     formData.append('avatar', memberData.profileImage);
 
     const res = await fetch(BASE_API_URL, {
@@ -304,7 +299,11 @@ export async function createMember(memberData) {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.message || 'Failed to create member');
+      const errorMsg =
+        errData.message ||
+        (Array.isArray(errData.errors) && errData.errors[0]?.message) ||
+        'Failed to create member';
+      throw new Error(errorMsg);
     }
 
     const json = await res.json();
@@ -317,9 +316,12 @@ export async function createMember(memberData) {
     business: memberData.business || memberData.businessName,
     mobile: memberData.mobile,
     email: memberData.email,
+    password: memberData.password,
+    confirmPassword: memberData.confirmPassword || memberData.password,
     address: memberData.address || '',
     city: memberData.city || 'Ahmedabad',
     businessType: memberData.businessType || 'Retailer',
+    isActive: memberData.isActive !== undefined ? Boolean(memberData.isActive) : true,
     avatar: memberData.avatar || null,
   };
 
@@ -641,7 +643,7 @@ export async function updateAdminProfile(payload) {
   // Update stored session if present
   if (typeof window !== 'undefined') {
     try {
-      const rawSession = window.localStorage.getItem('jaa_admin_session');
+      const rawSession = window.localStorage.getItem('jaa_admin_user');
       if (rawSession) {
         const session = JSON.parse(rawSession);
         if (session?.user) {
@@ -649,7 +651,7 @@ export async function updateAdminProfile(payload) {
           session.user.name = data.data?.fullName || data.data?.name || session.user.name;
           session.user.image = userImg;
           session.user.avatar = userImg;
-          window.localStorage.setItem('jaa_admin_session', JSON.stringify(session));
+          window.localStorage.setItem('jaa_admin_user', JSON.stringify(session));
         }
       }
     } catch {}
@@ -686,4 +688,11 @@ export async function bulkImportMembers(members) {
 
   const result = await res.json();
   return result;
+}
+
+/**
+ * Toggle member active/inactive status
+ */
+export async function toggleMemberActive(id, isActive) {
+  return await updateMember(id, { isActive: Boolean(isActive) });
 }

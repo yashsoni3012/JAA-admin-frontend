@@ -25,6 +25,9 @@ function getPageTitle(pathname) {
   if (pathname === ROUTES.COMPLAINTS || pathname.startsWith(`${ROUTES.COMPLAINTS}`)) {
     return 'Complaints';
   }
+  if (pathname === '/admin/messages' || pathname.startsWith('/admin/messages')) {
+    return 'Broadcast Messages';
+  }
   const match = SIDEBAR_NAV.find((item) => pathname.startsWith(item.href));
   return match ? match.label : 'Admin';
 }

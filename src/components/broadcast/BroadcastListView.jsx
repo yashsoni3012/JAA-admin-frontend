@@ -244,43 +244,7 @@ export default function BroadcastListView({
 
   return (
     <section className="rounded-3xl border border-white bg-white p-5 sm:p-7 md:p-8 shadow-card space-y-6">
-      {/* Top Header: Title "Broadcast" + Action Buttons matching JAA design */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
-            Broadcast
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            View sent broadcasts or create a new announcement
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* + Create Broadcast Button */}
-          <Button
-            type="button"
-            variant="primary"
-            onClick={onCreateBroadcast}
-            className="px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold shadow-md shadow-[#2832A4]/20 active:scale-95 gap-1.5"
-          >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>Create Broadcast</span>
-          </Button>
-
-          {/* + Add Group Button */}
-          {/* <Button
-            type="button"
-            variant="primary"
-            onClick={onAddGroup}
-            className="from-[#1E2B8F] to-[#2832A4] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold shadow-md shadow-[#1E2B8F]/20 active:scale-95 gap-1.5"
-          >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>Add Group</span>
-          </Button> */}
-        </div>
-      </div>
-
-      {/* Search & Filter Bar */}
+      {/* Search, Filters & Action Button in ONE Equal Line */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
         {/* Search Input */}
         <div className="relative flex-1 max-w-xl">
@@ -290,30 +254,32 @@ export default function BroadcastListView({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search broadcast by title or message..."
-            className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-xs sm:text-sm text-ink placeholder:text-slate-400 focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition shadow-2xs"
+            className="h-10 w-full rounded-full border border-slate-200 bg-white pl-11 pr-4 text-xs sm:text-sm text-ink placeholder:text-slate-400 focus:border-[#2832A4] focus:outline-none focus:ring-4 focus:ring-[#2832A4]/10 transition shadow-2xs"
           />
         </div>
 
-        {/* Filters Dropdown Button matching Groups View */}
-        <div ref={filterDropdownRef} className="relative self-end sm:self-auto">
-          <button
-            type="button"
-            onClick={handleToggleFilterDropdown}
-            className={cn(
-              'rounded-full border px-4 py-2.5 text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition shadow-2xs cursor-pointer',
-              activeFilterCount > 0
-                ? 'border-[#2832A4] bg-indigo-50/70 text-[#2832A4]'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-            )}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2832A4] text-white text-[10px] font-bold">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
+        {/* Right Controls: Filters Button + Create Broadcast Button with Equal Height */}
+        <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+          {/* Filters Dropdown Button matching Groups View */}
+          <div ref={filterDropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={handleToggleFilterDropdown}
+              className={cn(
+                'h-10 rounded-full border px-4 text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition shadow-2xs cursor-pointer',
+                activeFilterCount > 0
+                  ? 'border-[#2832A4] bg-indigo-50/70 text-[#2832A4]'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2832A4] text-white text-[10px] font-bold">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
 
           {/* Floating Filter Popover Card */}
           {showFilterDropdown && (
@@ -445,7 +411,19 @@ export default function BroadcastListView({
             </div>
           )}
         </div>
+
+        {/* + Create Broadcast Button with equal h-10 height */}
+        <Button
+          type="button"
+          variant="primary"
+          onClick={onCreateBroadcast}
+          className="h-10 px-5 sm:px-6 text-xs sm:text-sm font-semibold shadow-md shadow-[#2832A4]/20 active:scale-95 gap-1.5 rounded-full inline-flex items-center"
+        >
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <span>Create Broadcast</span>
+        </Button>
       </div>
+    </div>
 
       {/* Active Filter Badges */}
       {activeFilterCount > 0 && (
