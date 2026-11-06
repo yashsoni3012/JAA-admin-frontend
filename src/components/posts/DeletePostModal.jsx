@@ -40,65 +40,13 @@ export default function DeletePostModal({
       bodyClassName="p-8 md:p-10 text-center"
     >
       <div className="flex flex-col items-center">
-        {/* 3D Red Glossy Trash Can with White 'X' Badge */}
+        {/* Trash Can Image */}
         <div className="relative mb-5 flex items-center justify-center">
-          <svg
-            className="h-28 w-28 drop-shadow-xl"
-            viewBox="0 0 120 120"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <defs>
-              <linearGradient id="postTrashBody" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#FF4D4D" />
-                <stop offset="60%" stopColor="#E60000" />
-                <stop offset="100%" stopColor="#B30000" />
-              </linearGradient>
-              <linearGradient id="postTrashLid" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#FF6666" />
-                <stop offset="100%" stopColor="#CC0000" />
-              </linearGradient>
-              <linearGradient id="postBadgeGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#FF3333" />
-                <stop offset="100%" stopColor="#990000" />
-              </linearGradient>
-              <filter id="postShadow" x="-10%" y="-10%" width="120%" height="130%">
-                <feDropShadow dx="0" dy="4" stdDeviation="4" floodOpacity="0.25" floodColor="#B30000" />
-              </filter>
-            </defs>
-
-            {/* Trash Bin Lid */}
-            <ellipse cx="60" cy="30" rx="36" ry="10" fill="url(#postTrashLid)" filter="url(#postShadow)" />
-            <path
-              d="M50 25 C50 20, 70 20, 70 25"
-              stroke="#FFFFFF"
-              strokeWidth="4"
-              strokeLinecap="round"
-              fill="none"
-              opacity="0.8"
-            />
-            <path
-              d="M26 30 C26 27, 94 27, 94 30 L90 35 C90 37, 30 37, 30 35 Z"
-              fill="#D60000"
-            />
-
-            {/* Trash Bin Body */}
-            <path
-              d="M32 36 L40 100 C41 106, 79 106, 80 100 L88 36 Z"
-              fill="url(#postTrashBody)"
-              filter="url(#postShadow)"
-            />
-
-            {/* Vertical Ribs on Can */}
-            <path d="M48 42 L52 95" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" opacity="0.4" />
-            <path d="M60 42 L60 96" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" opacity="0.3" />
-            <path d="M72 42 L68 95" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" opacity="0.4" />
-
-            {/* Red Circle Badge with White 'X' on Front */}
-            <circle cx="60" cy="72" r="14" fill="url(#postBadgeGrad)" stroke="#FFFFFF" strokeWidth="3" filter="url(#postShadow)" />
-            <line x1="53" y1="65" x2="67" y2="79" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
-            <line x1="67" y1="65" x2="53" y2="79" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
-          </svg>
+          <img
+            src="/uploads/trash-img.png"
+            alt="Delete"
+            className="h-28 w-28 object-contain drop-shadow-xl"
+          />
         </div>
 
         {/* Modal Title */}

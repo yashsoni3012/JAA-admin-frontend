@@ -50,40 +50,44 @@ function MemberRowComponent({
             </div>
           </div>
           <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isActive}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onToggleActive) onToggleActive(member, !isActive);
-              }}
-              title={isActive ? 'Click to make Inactive' : 'Click to make Active'}
-              className="inline-flex items-center gap-2 cursor-pointer focus:outline-none select-none transition-opacity active:opacity-80"
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
-                  isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
-                )}
+            {isApproved ? (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isActive}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onToggleActive) onToggleActive(member, !isActive);
+                }}
+                title={isActive ? 'Click to make Inactive' : 'Click to make Active'}
+                className="inline-flex items-center gap-2 cursor-pointer focus:outline-none select-none transition-opacity active:opacity-80"
               >
                 <span
+                  aria-hidden="true"
                   className={cn(
-                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
-                    isActive ? 'translate-x-5' : 'translate-x-0'
+                    'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                    isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
                   )}
-                />
-              </span>
-              <span
-                className={cn(
-                  'text-xs sm:text-sm font-medium transition-colors select-none',
-                  isActive ? 'text-[#2832A4]' : 'text-slate-400'
-                )}
-              >
-                {isActive ? 'Active' : 'Inactive'}
-              </span>
-            </button>
+                >
+                  <span
+                    className={cn(
+                      'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
+                      isActive ? 'translate-x-5' : 'translate-x-0'
+                    )}
+                  />
+                </span>
+                <span
+                  className={cn(
+                    'text-xs sm:text-sm font-medium transition-colors select-none',
+                    isActive ? 'text-[#2832A4]' : 'text-slate-400'
+                  )}
+                >
+                  {isActive ? 'Active' : 'Inactive'}
+                </span>
+              </button>
+            ) : (
+              <span className="text-xl font-semibold text-slate-400 select-none">—</span>
+            )}
           </div>
         </div>
 
@@ -275,40 +279,44 @@ function MemberRowComponent({
 
         {/* 3. Status Column (2 cols) */}
         <div className="col-span-2 flex items-center justify-center">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isActive}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onToggleActive) onToggleActive(member, !isActive);
-            }}
-            title={isActive ? 'Status: Active (Click to make Inactive)' : 'Status: Inactive (Click to make Active)'}
-            className="inline-flex items-center gap-2.5 cursor-pointer focus:outline-none select-none transition-opacity active:opacity-80"
-          >
-            <span
-              aria-hidden="true"
-              className={cn(
-                'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
-                isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
-              )}
+          {isApproved ? (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onToggleActive) onToggleActive(member, !isActive);
+              }}
+              title={isActive ? 'Status: Active (Click to make Inactive)' : 'Status: Inactive (Click to make Active)'}
+              className="inline-flex items-center gap-2.5 cursor-pointer focus:outline-none select-none transition-opacity active:opacity-80"
             >
               <span
+                aria-hidden="true"
                 className={cn(
-                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
-                  isActive ? 'translate-x-5' : 'translate-x-0'
+                  'relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                  isActive ? 'bg-[#2832A4]' : 'bg-slate-300'
                 )}
-              />
-            </span>
-            <span
-              className={cn(
-                'text-sm font-medium transition-colors select-none',
-                isActive ? 'text-[#2832A4]' : 'text-slate-400'
-              )}
-            >
-              {isActive ? 'Active' : 'Inactive'}
-            </span>
-          </button>
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
+                    isActive ? 'translate-x-5' : 'translate-x-0'
+                  )}
+                />
+              </span>
+              <span
+                className={cn(
+                  'text-sm font-medium transition-colors select-none',
+                  isActive ? 'text-[#2832A4]' : 'text-slate-400'
+                )}
+              >
+                {isActive ? 'Active' : 'Inactive'}
+              </span>
+            </button>
+          ) : (
+            <span className="text-xl font-semibold text-slate-400 select-none">—</span>
+          )}
         </div>
 
         {/* 4. Actions Column (3 cols - fits all 5 buttons on one single row) */}

@@ -64,7 +64,6 @@ export default function AddMemberModal({ open, onClose, onAddMember }) {
       case 'mobile':
         if (!value.trim()) return 'Mobile number is required';
         if (!/^\d{10}$/.test(value.trim())) return 'Mobile number must be a 10-digit number';
-        if (!/^[6-9]\d{9}$/.test(value.trim())) return 'Please enter a valid 10-digit Indian mobile number';
         return '';
       case 'email':
         if (!value.trim()) return 'Email address is required';

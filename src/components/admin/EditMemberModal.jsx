@@ -85,7 +85,8 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const sanitizedValue = name === 'mobile' ? value.replace(/\D/g, '').slice(0, 10) : value;
+    setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
     if (error) setError('');
   };
 
@@ -147,6 +148,10 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
     }
     if (!formData.mobile.trim()) {
       setError('Mobile number is required');
+      return;
+    }
+    if (!/^\d{10}$/.test(formData.mobile.trim())) {
+      setError('Mobile number must be a 10-digit number');
       return;
     }
     if (!formData.email.trim()) {
@@ -277,22 +282,24 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
             </div>
           </div>
 
-          {/* Status Selector */}
-          <div className="w-full sm:w-auto text-left">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-              Membership Status
-            </label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className="w-full sm:w-44 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-ink shadow-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            >
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+          {/* Status Selector — only shown when member is NOT yet approved */}
+          {(member.status || '').toLowerCase() !== 'approved' && (
+            <div className="w-full sm:w-auto text-left">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Membership Status
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full sm:w-44 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-ink shadow-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          )}
 
           {/* Active / Inactive Switch */}
           <div className="w-full sm:w-auto text-left">
@@ -421,6 +428,7 @@ export default function EditMemberModal({ open, member, onClose, onMemberUpdated
             <input
               type="tel"
               name="mobile"
+              maxLength={10}
               value={formData.mobile}
               onChange={handleChange}
               placeholder="e.g. 9737126164"
