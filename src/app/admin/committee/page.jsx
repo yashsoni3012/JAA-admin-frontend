@@ -15,6 +15,7 @@ import {
   Phone,
   Building,
   Mail,
+  Eye,
 } from 'lucide-react';
 import Avatar from '@/components/common/Avatar';
 import Button from '@/components/common/Button';
@@ -272,16 +273,14 @@ export default function CommitteePage() {
               return (
                 <div
                   key={pos.id}
+                  onClick={() => setExpandedId(pos.id)}
                   className={cn(
-                    'rounded-2xl border bg-white shadow-xs hover:border-[#2832A4]/40 hover:shadow-sm transition-all overflow-hidden',
+                    'rounded-2xl border bg-white shadow-xs hover:border-[#2832A4]/40 hover:shadow-sm transition-all overflow-hidden cursor-pointer',
                     isSelected ? 'border-[#2832A4] ring-2 ring-[#2832A4]/10' : 'border-slate-200/80'
                   )}
                 >
                   {/* Position Header Row */}
-                  <div
-                    onClick={() => toggleExpand(pos.id)}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:px-6 sm:py-4 bg-[#F8FAFC] hover:bg-slate-100/70 cursor-pointer select-none transition-colors"
-                  >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:px-6 sm:py-4 bg-[#F8FAFC] hover:bg-slate-100/70 select-none transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-[#2832A4]">
                         <Users className="h-4 w-4" />
@@ -297,6 +296,20 @@ export default function CommitteePage() {
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {/* View Details Eye Icon Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedId(pos.id);
+                        }}
+                        title="View Position Details"
+                        aria-label="View Position Details"
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 cursor-pointer"
+                      >
+                        <Eye className="h-4 w-4 stroke-[2]" />
+                      </button>
+
                       {/* + Add Member Button */}
                       <Button
                         type="button"
@@ -334,7 +347,7 @@ export default function CommitteePage() {
                         }}
                         title="View position members in popup"
                         aria-label="View position members in popup"
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200/60 hover:text-[#2832A4] transition"
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200/60 hover:text-[#2832A4] transition cursor-pointer"
                       >
                         <ChevronDown className="h-4 w-4 text-slate-500" />
                       </button>
@@ -350,7 +363,7 @@ export default function CommitteePage() {
       {/* Centered Position Members Popup Modal with Transparent Blur */}
       {activePosition && (
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-6 bg-slate-900/40 backdrop-blur-[4px] cursor-pointer"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/50 backdrop-blur-[4px] cursor-pointer"
           onClick={() => setExpandedId(null)}
           title="Click backdrop to close"
         >
@@ -546,14 +559,15 @@ export default function CommitteePage() {
                             <td className="py-3.5 pr-5 pl-4 text-center">
                               <button
                                 type="button"
-                                onClick={() =>
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setRemovingMemberData({
                                     positionId: activePosition.id,
                                     positionName: activePosition.position,
                                     memberId: rawId,
                                     memberName,
-                                  })
-                                }
+                                  });
+                                }}
                                 title="Remove member from position"
                                 aria-label="Remove member from position"
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-white text-red-500 transition-all hover:border-red-400 hover:bg-red-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"

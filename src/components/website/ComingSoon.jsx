@@ -1,15 +1,19 @@
 import Link from 'next/link';
 import { SITE } from '@/config/site';
 import Logo from '@/components/common/Logo';
+import Footer from '@/components/common/Footer';
 
 export default function ComingSoon() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-surface px-6">
+    <div className="relative flex min-h-screen flex-col justify-between overflow-hidden bg-surface px-6">
       {/* Decorative background shapes */}
       <div aria-hidden="true" className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-brand-100 opacity-70 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-red-100 opacity-60 blur-3xl" />
 
-      <div className="relative w-full max-w-2xl text-center">
+      {/* Top spacer */}
+      <div className="h-6" aria-hidden="true" />
+
+      <main className="relative mx-auto my-auto w-full max-w-2xl text-center py-10">
         <div className="mb-10 flex justify-center">
           <Logo />
         </div>
@@ -25,7 +29,9 @@ export default function ComingSoon() {
             Go to Admin Portal &rarr;
           </Link>
         </div>
-      </div>
-    </main>
+      </main>
+
+      <Footer showDeveloper className="relative z-10 py-6 border-t border-slate-200/50" />
+    </div>
   );
 }

@@ -75,7 +75,7 @@ function AdminSidebarInner({
         onClick={handleSidebarClick}
         className={cn(
           'flex h-full flex-col bg-[#EEF1FF] py-8 transition-all duration-300 ease-in-out select-none',
-          collapsed ? 'px-3 items-center cursor-pointer' : 'px-5'
+          collapsed ? 'px-1.5 items-center cursor-pointer' : 'px-5'
         )}
         title={collapsed ? 'Click to expand sidebar' : undefined}
       >
@@ -83,7 +83,7 @@ function AdminSidebarInner({
         <div
           className={cn(
             'transition-all duration-300 ease-in-out flex items-center',
-            collapsed ? 'justify-center px-0' : 'justify-start px-1'
+            collapsed ? 'justify-center w-full px-0' : 'justify-start px-1'
           )}
         >
           <div
@@ -96,17 +96,17 @@ function AdminSidebarInner({
             <div
               className={cn(
                 'relative flex items-center justify-center transition-all duration-300',
-                collapsed ? 'h-10 w-10 overflow-hidden' : 'w-[191px] h-[70px]'
+                collapsed ? 'w-[76px] h-[52px]' : 'w-[191px] h-[70px]'
               )}
             >
               <img
                 src="/uploads/jaa-logo-1793261989412.png"
                 alt="Jewellers Association Ahmedabad"
                 className={cn(
-                  'transition-all duration-300',
+                  'transition-all duration-300 object-contain',
                   collapsed
-                    ? 'h-10 w-10 object-contain'
-                    : 'w-[191px] h-auto object-contain'
+                    ? 'w-[76px] h-auto max-h-[50px]'
+                    : 'w-[191px] h-auto'
                 )}
               />
             </div>

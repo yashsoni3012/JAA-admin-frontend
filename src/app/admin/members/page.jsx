@@ -114,12 +114,32 @@ export default function MembersPage() {
     staleTime: 1000 * 60 * 3, // 3 minutes fresh cache
   });
 
-  const members = memberData?.members || (Array.isArray(memberData) ? memberData : []);
-  const rawPagination = memberData?.pagination || {};
+  const rawMembers = memberData?.members || (Array.isArray(memberData) ? memberData : []);
   const counts = memberData?.counts || { all: 0, pending: 0, approved: 0, rejected: 0 };
 
+  // Never include rejected or pending members when filtering by active or inactive activity
+  const members = useMemo(() => {
+    if (activityFilter === 'inactive') {
+      return rawMembers.filter((m) => {
+        const s = String(m.status || '').toLowerCase();
+        return s !== 'rejected' && s !== 'pending';
+      });
+    }
+    if (activityFilter === 'active') {
+      return rawMembers.filter((m) => {
+        const s = String(m.status || '').toLowerCase();
+        return s !== 'rejected' && s !== 'pending';
+      });
+    }
+    return rawMembers;
+  }, [rawMembers, activityFilter]);
+
+  const rawPagination = memberData?.pagination || {};
+
   const totalItems =
-    rawPagination.total_items !== undefined
+    activityFilter !== 'all' && counts[activityFilter] !== undefined
+      ? counts[activityFilter]
+      : rawPagination.total_items !== undefined
       ? rawPagination.total_items
       : rawPagination.total !== undefined
       ? rawPagination.total

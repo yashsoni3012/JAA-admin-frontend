@@ -531,7 +531,8 @@ export default function PostsPage() {
                   return (
                     <tr
                       key={item.id}
-                      className="hover:bg-slate-50/60 transition-colors group"
+                      onClick={() => handleViewPost(item)}
+                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                     >
                       {/* 1. Post: Thumbnail + Title + Snippet */}
                       <td className="py-4 pl-6 pr-4">
@@ -613,7 +614,10 @@ export default function PostsPage() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleViewPost(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewPost(item);
+                            }}
                             disabled={isLoadingDetail}
                             title="View Details"
                             aria-label="View Details"
@@ -624,7 +628,10 @@ export default function PostsPage() {
 
                           <button
                             type="button"
-                            onClick={() => setDeletingPost(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingPost(item);
+                            }}
                             title="Delete Post"
                             aria-label="Delete Post"
                             className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-white text-red-500 transition-all hover:border-red-400 hover:bg-red-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"

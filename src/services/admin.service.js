@@ -258,6 +258,8 @@ export async function getMembers(params = {}) {
     pending: fallback.filter((m) => m.status === 'Pending').length,
     approved: fallback.filter((m) => m.status === 'Approved').length,
     rejected: fallback.filter((m) => m.status === 'Rejected').length,
+    active: fallback.filter((m) => m.status === 'Approved' && m.isActive).length,
+    inactive: fallback.filter((m) => m.status === 'Approved' && !m.isActive).length,
   };
   fallback.total = fallback.length;
   return fallback;

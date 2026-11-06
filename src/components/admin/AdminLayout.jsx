@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import MobileSidebar from '@/components/admin/MobileSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import Footer from '@/components/common/Footer';
 import { SIDEBAR_NAV } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
 import { cn } from '@/lib/utils';
@@ -114,6 +115,9 @@ export default function AdminLayout({ children }) {
         <main className="flex-1 px-3.5 sm:px-4 pb-6 sm:pb-8 md:px-8 md:pb-10">
           {children}
         </main>
+
+        {/* Global Footer */}
+        <Footer className="mt-auto border-t border-slate-200/60 bg-transparent py-4" />
       </div>
 
       {/* Logout Confirmation Modal matching the design */}

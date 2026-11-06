@@ -268,7 +268,8 @@ export default function LeadsPage() {
                   return (
                     <tr
                       key={item.id}
-                      className="hover:bg-slate-50/70 transition-colors group"
+                      onClick={() => handleViewLead(item)}
+                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                     >
                       {/* Lead Title */}
                       <td className="py-4 px-6">
@@ -332,7 +333,10 @@ export default function LeadsPage() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleViewLead(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewLead(item);
+                            }}
                             disabled={loadingDetailId === item.id}
                             title="View Details"
                             aria-label="View Details"
@@ -347,7 +351,10 @@ export default function LeadsPage() {
 
                           <button
                             type="button"
-                            onClick={() => setDeletingLead(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingLead(item);
+                            }}
                             title="Delete Lead"
                             aria-label="Delete Lead"
                             className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-500 transition-all hover:bg-red-100 hover:text-red-600 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"

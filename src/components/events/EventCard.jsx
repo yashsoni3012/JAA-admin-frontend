@@ -43,7 +43,10 @@ export default function EventCard({
       : '10:00AM - 7:00PM';
 
   return (
-    <div className="group relative rounded-3xl border border-slate-200/80 bg-white p-5 md:p-6 shadow-sm hover:shadow-md transition-all duration-200">
+    <div
+      onClick={() => onView && onView(event)}
+      className="group relative rounded-3xl border border-slate-200/80 bg-white p-5 md:p-6 shadow-sm hover:shadow-md hover:border-[#2832A4]/40 hover:bg-slate-50/30 transition-all duration-200 cursor-pointer"
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-5 md:gap-6">
         {/* COLUMN 1 (Col 1-7): Event Thumbnail + Details */}
         <div className="lg:col-span-7 xl:col-span-8 flex flex-col sm:flex-row items-start sm:items-center gap-5 min-w-0">
@@ -150,13 +153,16 @@ export default function EventCard({
             Actions
           </span>
           <div className="flex items-center gap-2.5">
-            {/* View Details Eye Icon Button (replacing text button) */}
+            {/* View Details Eye Icon Button */}
             <button
               type="button"
-              onClick={() => onView && onView(event)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onView) onView(event);
+              }}
               title="View Details"
               aria-label="View Details"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 cursor-pointer"
             >
               <Eye className="h-4 w-4 stroke-[2]" />
             </button>
@@ -164,10 +170,13 @@ export default function EventCard({
             {/* Edit Event Button */}
             <button
               type="button"
-              onClick={() => onEdit && onEdit(event)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEdit) onEdit(event);
+              }}
               title="Edit Event"
               aria-label="Edit Event"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all hover:border-[#2832A4] hover:text-[#2832A4] hover:bg-slate-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all hover:border-[#2832A4] hover:text-[#2832A4] hover:bg-slate-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 cursor-pointer"
             >
               <Edit3 className="h-4 w-4 stroke-[2]" />
             </button>
@@ -175,10 +184,13 @@ export default function EventCard({
             {/* Delete Event Button */}
             <button
               type="button"
-              onClick={() => onDelete && onDelete(event)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onDelete) onDelete(event);
+              }}
               title="Delete Event"
               aria-label="Delete Event"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-white text-red-500 transition-all hover:border-red-400 hover:bg-red-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-red-100"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-white text-red-500 transition-all hover:border-red-400 hover:bg-red-50 hover:shadow-xs focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"
             >
               <Trash2 className="h-4 w-4 stroke-[2]" />
             </button>

@@ -438,7 +438,8 @@ export default function ComplaintsPage() {
                   return (
                     <tr
                       key={itemId}
-                      className="hover:bg-slate-50/70 transition-colors group"
+                      onClick={() => handleViewComplaint(item)}
+                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                     >
                       {/* COMPLAINTS ID */}
                       <td className="py-4 pl-6 pr-4 font-bold text-slate-900 whitespace-nowrap">
@@ -483,7 +484,10 @@ export default function ComplaintsPage() {
                       <td className="py-4 pr-6 pl-4 text-center whitespace-nowrap">
                         <button
                           type="button"
-                          onClick={() => handleViewComplaint(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewComplaint(item);
+                          }}
                           title="View Details"
                           aria-label="View Details"
                           className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 mx-auto cursor-pointer"

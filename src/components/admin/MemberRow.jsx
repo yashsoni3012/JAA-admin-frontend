@@ -22,10 +22,14 @@ function MemberRowComponent({
   const statusStr = String(member.status || '').toLowerCase();
   const isPending = statusStr === 'pending';
   const isApproved = statusStr === 'approved';
+  const isRejected = statusStr === 'rejected';
   const isActive = member.isActive !== undefined ? Boolean(member.isActive) : (statusStr === 'approved' || statusStr === 'active');
 
   return (
-    <li className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors">
+    <li
+      onClick={() => onView && onView(member)}
+      className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/80 transition-colors cursor-pointer"
+    >
       {/* ========================================================= */}
       {/* 1. MOBILE CARD VIEW (< md: hidden on tablet and desktop)   */}
       {/* ========================================================= */}
@@ -85,6 +89,11 @@ function MemberRowComponent({
                   {isActive ? 'Active' : 'Inactive'}
                 </span>
               </button>
+            ) : isRejected ? (
+              <Badge status="Rejected" className="gap-1.5 text-xs font-semibold px-2.5 py-0.5 shadow-2xs select-none">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                Rejected
+              </Badge>
             ) : (
               <span className="text-xl font-semibold text-slate-400 select-none">—</span>
             )}
@@ -96,6 +105,7 @@ function MemberRowComponent({
           {member.mobile && (
             <a
               href={`tel:${member.mobile}`}
+              onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-2 hover:text-[#2832A4] transition truncate"
             >
               <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
@@ -105,6 +115,7 @@ function MemberRowComponent({
           {member.email && (
             <a
               href={`mailto:${member.email}`}
+              onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-2 hover:text-[#2832A4] transition truncate"
             >
               <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
@@ -134,10 +145,13 @@ function MemberRowComponent({
             {/* View Details */}
             <button
               type="button"
-              onClick={() => onView(member)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onView) onView(member);
+              }}
               title="View Details"
               aria-label="View Details"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 active:scale-95 shadow-2xs"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 active:scale-95 shadow-2xs cursor-pointer"
             >
               <Eye className="h-4 w-4" />
             </button>
@@ -148,7 +162,10 @@ function MemberRowComponent({
                 {onIdCard && (
                   <button
                     type="button"
-                    onClick={() => onIdCard(member)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onIdCard(member);
+                    }}
                     title="View ID Card"
                     aria-label="View ID Card"
                     className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50/70 text-[#1E2B8F] transition-all hover:bg-indigo-100 active:scale-95 shadow-2xs cursor-pointer"
@@ -160,7 +177,10 @@ function MemberRowComponent({
                 {onEdit && (
                   <button
                     type="button"
-                    onClick={() => onEdit(member)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(member);
+                    }}
                     title="Edit Member"
                     aria-label="Edit Member"
                     className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-all hover:border-brand-500 hover:text-brand-600 hover:bg-slate-50 active:scale-95 shadow-2xs cursor-pointer"
@@ -172,7 +192,10 @@ function MemberRowComponent({
                 {onDelete && (
                   <button
                     type="button"
-                    onClick={() => onDelete(member)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(member);
+                    }}
                     title="Delete Member"
                     aria-label="Delete Member"
                     className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/70 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 active:scale-95 shadow-2xs cursor-pointer"
@@ -188,7 +211,10 @@ function MemberRowComponent({
               <>
                 <button
                   type="button"
-                  onClick={() => onApprove(member)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApprove(member);
+                  }}
                   title="Approve Member"
                   aria-label="Approve Member"
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 transition-all hover:bg-emerald-50 active:scale-95 shadow-2xs cursor-pointer"
@@ -198,7 +224,10 @@ function MemberRowComponent({
 
                 <button
                   type="button"
-                  onClick={() => onReject(member)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReject(member);
+                  }}
                   title="Reject Member"
                   aria-label="Reject Member"
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-red-400 bg-white text-red-500 transition-all hover:bg-red-50 active:scale-95 shadow-2xs cursor-pointer"
@@ -212,7 +241,10 @@ function MemberRowComponent({
             {!isApproved && !isPending && onDelete && (
               <button
                 type="button"
-                onClick={() => onDelete(member)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(member);
+                }}
                 title="Delete Member"
                 aria-label="Delete Member"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/70 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 active:scale-95 shadow-2xs cursor-pointer"
@@ -252,14 +284,26 @@ function MemberRowComponent({
           <ul className="space-y-1 text-xs text-slate-500">
             {member.mobile && (
               <li className="flex items-center gap-2 truncate">
-                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                <span className="truncate">{member.mobile}</span>
+                <a
+                  href={`tel:${member.mobile}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 hover:text-[#2832A4] transition truncate"
+                >
+                  <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{member.mobile}</span>
+                </a>
               </li>
             )}
             {member.email && (
               <li className="flex items-center gap-2 truncate">
-                <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                <span className="truncate">{member.email}</span>
+                <a
+                  href={`mailto:${member.email}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 hover:text-[#2832A4] transition truncate"
+                >
+                  <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{member.email}</span>
+                </a>
               </li>
             )}
             {(member.city || member.country) && (
@@ -314,6 +358,11 @@ function MemberRowComponent({
                 {isActive ? 'Active' : 'Inactive'}
               </span>
             </button>
+          ) : isRejected ? (
+            <Badge status="Rejected" className="gap-1.5 text-xs font-semibold px-3 py-1 shadow-2xs select-none">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+              Rejected
+            </Badge>
           ) : (
             <span className="text-xl font-semibold text-slate-400 select-none">—</span>
           )}
@@ -324,10 +373,13 @@ function MemberRowComponent({
           {/* View Details Icon Button */}
           <button
             type="button"
-            onClick={() => onView(member)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onView) onView(member);
+            }}
             title="View Details"
             aria-label="View Details"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2832A4] bg-white text-[#2832A4] transition-all hover:bg-blue-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
           >
             <Eye className="h-4 w-4" />
           </button>
@@ -338,7 +390,10 @@ function MemberRowComponent({
               {onIdCard && (
                 <button
                   type="button"
-                  onClick={() => onIdCard(member)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onIdCard(member);
+                  }}
                   title="View ID Card"
                   aria-label="View ID Card"
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50/60 text-[#1E2B8F] transition-all hover:bg-indigo-100 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer"
@@ -350,7 +405,10 @@ function MemberRowComponent({
               {onEdit && (
                 <button
                   type="button"
-                  onClick={() => onEdit(member)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(member);
+                  }}
                   title="Edit Member"
                   aria-label="Edit Member"
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition-all hover:border-brand-500 hover:text-brand-600 hover:bg-slate-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-100 cursor-pointer"
@@ -362,7 +420,10 @@ function MemberRowComponent({
               {onDelete && (
                 <button
                   type="button"
-                  onClick={() => onDelete(member)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(member);
+                  }}
                   title="Delete Member"
                   aria-label="Delete Member"
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/60 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"
@@ -378,7 +439,10 @@ function MemberRowComponent({
             <>
               <button
                 type="button"
-                onClick={() => onApprove(member)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApprove(member);
+                }}
                 title="Approve Member"
                 aria-label="Approve Member"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400 bg-white text-emerald-600 transition-all hover:bg-emerald-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-100 cursor-pointer"
@@ -388,7 +452,10 @@ function MemberRowComponent({
 
               <button
                 type="button"
-                onClick={() => onReject(member)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReject(member);
+                }}
                 title="Reject Member"
                 aria-label="Reject Member"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-red-400 bg-white text-red-500 transition-all hover:bg-red-50 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"
@@ -402,7 +469,10 @@ function MemberRowComponent({
           {!isApproved && !isPending && onDelete && (
             <button
               type="button"
-              onClick={() => onDelete(member)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(member);
+              }}
               title="Delete Member"
               aria-label="Delete Member"
               className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200 bg-red-50/60 text-red-600 transition-all hover:bg-red-100 hover:border-red-300 hover:shadow-xs active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-100 cursor-pointer"
