@@ -7,6 +7,8 @@ const SERVER_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
 export const PROFILE_API_URL =
   process.env.NEXT_PUBLIC_PROFILE_API_URL || 'http://localhost:5000/api/admin/profile';
+export const DASHBOARD_API_URL =
+  process.env.NEXT_PUBLIC_DASHBOARD_API_URL || 'http://localhost:5000/api/admin/dashboard';
 
 
 /**
@@ -509,32 +511,120 @@ export async function deleteMember(id) {
   return await res.json();
 }
 
+export const DEFAULT_DASHBOARD_DATA = {
+  members: {
+    totalMembers: 9,
+    newMemberRequests: 0,
+  },
+  upcomingEvents: 2,
+  newComplaints: 7,
+  recentComplaints: [
+    {
+      complaintId: 'CMP-2026-029',
+      complaintBy: 'yash Mehta',
+      complaintType: 'no autorized',
+    },
+    {
+      complaintId: 'CMP-2026-028',
+      complaintBy: 'yash Mehta',
+      complaintType: 'no autorized',
+    },
+    {
+      complaintId: 'CMP-2026-027',
+      complaintBy: 'Rajesh Mehta',
+      complaintType: 'no autorized',
+    },
+    {
+      complaintId: 'CMP-2026-025',
+      complaintBy: 'Suresh Shah',
+      complaintType: 'Damaged Rough Diamonds',
+    },
+    {
+      complaintId: 'CMP-2026-024',
+      complaintBy: 'Rajesh Mehta',
+      complaintType: 'Fraud & Breach of Trust',
+    },
+  ],
+  committeeMembers: [
+    {
+      positionName: 'Secratary',
+      totalCounts: 1,
+    },
+    {
+      positionName: 'Chairman',
+      totalCounts: 2,
+    },
+  ],
+  recentPosts: [
+    {
+      post: 'AGM 2026 Official Notice',
+      postedBy: 'JAA Admin',
+    },
+    {
+      post: 'AGM 2026 Official Notice',
+      postedBy: 'JAA Admin',
+    },
+    {
+      post: 'AGM 2026 Official Notice',
+      postedBy: 'JAA Admin',
+    },
+    {
+      post: 'Expo Highlights Video',
+      postedBy: 'JAA Admin',
+    },
+  ],
+};
+
 /**
- * Get dashboard stats
+ * Get dashboard stats matching the backend format
  */
 export async function getDashboardStats() {
   try {
-    const res = await getMembers({ page: 1, limit: 5 });
-    const members = Array.isArray(res) ? res : res.members || [];
-    const counts = res.counts;
-    return {
-      total: counts?.all ?? members.length,
-      approved: counts?.approved ?? members.filter((m) => m.status === 'Approved').length,
-      pending: counts?.pending ?? members.filter((m) => m.status === 'Pending').length,
-      rejected: counts?.rejected ?? members.filter((m) => m.status === 'Rejected').length,
-      monthly: [42, 58, 49, 71, 66, 84, 77, 92],
-      recent: members.slice(0, 5),
-    };
-  } catch {
-    return {
-      total: 7,
-      approved: 6,
-      pending: 1,
-      rejected: 0,
-      monthly: [42, 58, 49, 71, 66, 84, 77, 92],
-      recent: [],
-    };
+    const res = await fetch(resolveApiUrl(DASHBOARD_API_URL), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const data = json?.data || json;
+      if (
+        data &&
+        (data.members ||
+          data.upcomingEvents !== undefined ||
+          data.newComplaints !== undefined ||
+          data.recentComplaints ||
+          data.committeeMembers ||
+          data.recentPosts)
+      ) {
+        return {
+          members: {
+            totalMembers: Number(data?.members?.totalMembers ?? DEFAULT_DASHBOARD_DATA.members.totalMembers),
+            newMemberRequests: Number(data?.members?.newMemberRequests ?? DEFAULT_DASHBOARD_DATA.members.newMemberRequests),
+          },
+          upcomingEvents: Number(data?.upcomingEvents ?? DEFAULT_DASHBOARD_DATA.upcomingEvents),
+          newComplaints: Number(data?.newComplaints ?? DEFAULT_DASHBOARD_DATA.newComplaints),
+          recentComplaints: Array.isArray(data?.recentComplaints)
+            ? data.recentComplaints
+            : DEFAULT_DASHBOARD_DATA.recentComplaints,
+          committeeMembers: Array.isArray(data?.committeeMembers)
+            ? data.committeeMembers
+            : DEFAULT_DASHBOARD_DATA.committeeMembers,
+          recentPosts: Array.isArray(data?.recentPosts)
+            ? data.recentPosts
+            : DEFAULT_DASHBOARD_DATA.recentPosts,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Dashboard stats API error, using default data:', err);
   }
+
+  return DEFAULT_DASHBOARD_DATA;
 }
 
 // Fallback sample data matching user's backend format

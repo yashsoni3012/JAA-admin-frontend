@@ -127,6 +127,7 @@ export default function AdminHeader({
       <Link
         role="menuitem"
         href={ROUTES.PROFILE}
+        prefetch={false}
         onClick={() => setMenuOpen(false)}
         className="flex items-center gap-3 px-5 py-3 text-sm text-slate-700 hover:bg-brand-50 transition"
       >

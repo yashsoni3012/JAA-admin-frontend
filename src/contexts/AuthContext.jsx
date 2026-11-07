@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { adminLogin, adminLogout, getAuthSession, verifyAuthSession } from '@/services/auth.service';
+import { adminLogin, adminLogout, getAuthSession } from '@/services/auth.service';
 
 export const AuthContext = createContext(null);
 
@@ -9,36 +9,23 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore and verify cookie-based session after mount
+  // Restore authenticated session after mount without making unnecessary background API calls
   useEffect(() => {
     let isMounted = true;
 
-    async function checkAuth() {
-      try {
-        // 1. Set cached user profile if present for immediate UI display without flashing
-        const cached = getAuthSession();
-        if (cached?.user && isMounted) {
-          setUser(cached.user);
-        }
-
-        // 2. Verify active HTTP-only cookie with backend
-        const verifiedUser = await verifyAuthSession();
-        if (isMounted) {
-          if (verifiedUser) {
-            setUser(verifiedUser);
-          } else {
-            setUser(null);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to verify cookie auth session:', err);
-        if (isMounted) setUser(null);
-      } finally {
-        if (isMounted) setIsLoading(false);
+    try {
+      const cached = getAuthSession();
+      if (cached?.user && isMounted) {
+        setUser(cached.user);
+      } else if (isMounted) {
+        setUser(null);
       }
+    } catch (err) {
+      console.error('Failed to restore auth session:', err);
+      if (isMounted) setUser(null);
+    } finally {
+      if (isMounted) setIsLoading(false);
     }
-
-    checkAuth();
 
     return () => {
       isMounted = false;
