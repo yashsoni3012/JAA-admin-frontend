@@ -1231,8 +1231,8 @@ export default function AdminChatPage() {
                                 isAdmin ? 'order-first mr-1' : 'order-last ml-1'
                               }`}
                             >
-                              {/* Edit button (for text messages) */}
-                              {msg.text && (
+                              {/* Edit button: Only for own sent messages (never on receiver messages) */}
+                              {isAdmin && msg.text && (
                                 <button
                                   type="button"
                                   onClick={() => handleStartEdit(msg)}
