@@ -26,6 +26,9 @@ function getPageTitle(pathname) {
   if (pathname === ROUTES.COMPLAINTS || pathname.startsWith(`${ROUTES.COMPLAINTS}`)) {
     return 'Complaints';
   }
+  if (pathname === ROUTES.CHAT || pathname.startsWith(`${ROUTES.CHAT}`)) {
+    return 'Chat';
+  }
   if (pathname === '/admin/messages' || pathname.startsWith('/admin/messages')) {
     return 'Broadcast Messages';
   }

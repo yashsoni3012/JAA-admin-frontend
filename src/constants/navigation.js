@@ -8,6 +8,7 @@ import {
   Siren,
   UsersRound,
   Image,
+  MessageCircle,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
@@ -17,6 +18,7 @@ export const SIDEBAR_NAV = [
   { label: 'Members', href: ROUTES.MEMBERS, icon: Users },
   { label: 'Events', href: ROUTES.EVENTS, icon: CalendarDays },
   { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
+  { label: 'Chat', href: ROUTES.CHAT, icon: MessageCircle },
   { label: 'Leads', href: '/admin/leads', icon: TrendingUp },
   { label: 'Complaints', href: ROUTES.COMPLAINTS, icon: AlertCircle },
   // { label: 'SOS', href: '/admin/sos', icon: Siren },

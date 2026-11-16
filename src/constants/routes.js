@@ -13,6 +13,7 @@ export const ROUTES = {
   COMPLAINTS: '/admin/complaints',
   COMMITTEE: '/admin/committee',
   POSTS: '/admin/posts',
+  CHAT: '/admin/chat',
   PROFILE: '/admin/profile',
   // SETTINGS: '/admin/settings',
 };
