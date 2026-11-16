@@ -426,6 +426,108 @@ export function sortMessagesChronologically(messages = []) {
 }
 
 /**
+ * Extracts ONLY the time (e.g. "06:06 pm") from a message createdAt string
+ */
+export function formatMessageTime(dateStr) {
+  if (!dateStr) return 'Just now';
+  const str = String(dateStr).trim();
+
+  // Pattern "DD-MM-YYYY hh:mm am/pm"
+  const dmyMatch = str.match(/\d{2}-\d{2}-\d{4}\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)/i);
+  if (dmyMatch) {
+    return dmyMatch[1].toLowerCase();
+  }
+
+  // Pattern "hh:mm am/pm" or "hh:mm"
+  const timeMatch = str.match(/^(\d{1,2}:\d{2}\s*(?:am|pm)?)$/i);
+  if (timeMatch) {
+    return timeMatch[1].toLowerCase();
+  }
+
+  // Try Date object parsing
+  try {
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }).toLowerCase();
+    }
+  } catch (_) {}
+
+  return str;
+}
+
+/**
+ * Normalizes message date to a clean human-friendly label (e.g. "Today", "Yesterday", "16 Nov 2026")
+ */
+export function formatMessageDateLabel(dateStr) {
+  if (!dateStr) return 'Today';
+  const str = String(dateStr).trim();
+
+  let msgDate = null;
+  const m = str.match(/^(\d{2})-(\d{2})-(\d{4})/);
+  if (m) {
+    const [, d, mo, y] = m;
+    msgDate = new Date(parseInt(y, 10), parseInt(mo, 10) - 1, parseInt(d, 10));
+  } else {
+    try {
+      const parsed = new Date(str);
+      if (!isNaN(parsed.getTime())) {
+        msgDate = parsed;
+      }
+    } catch (_) {}
+  }
+
+  if (!msgDate || isNaN(msgDate.getTime())) {
+    return 'Today';
+  }
+
+  const today = new Date();
+  const isToday =
+    msgDate.getDate() === today.getDate() &&
+    msgDate.getMonth() === today.getMonth() &&
+    msgDate.getFullYear() === today.getFullYear();
+
+  if (isToday) return 'Today';
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const isYesterday =
+    msgDate.getDate() === yesterday.getDate() &&
+    msgDate.getMonth() === yesterday.getMonth() &&
+    msgDate.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) return 'Yesterday';
+
+  return msgDate.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Returns a YYYY-MM-DD grouping key for date separation
+ */
+export function getMessageDateKey(dateStr) {
+  if (!dateStr) return 'today';
+  const str = String(dateStr).trim();
+  const m = str.match(/^(\d{2})-(\d{2})-(\d{4})/);
+  if (m) {
+    return `${m[3]}-${m[2]}-${m[1]}`;
+  }
+  try {
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split('T')[0];
+    }
+  } catch (_) {}
+  return 'today';
+}
+
+/**
  * GET: Fetch single conversation with messages by ID
  * Endpoint: GET http://localhost:5000/api/admin/chat/:id
  */

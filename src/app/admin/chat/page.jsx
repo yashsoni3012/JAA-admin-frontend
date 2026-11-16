@@ -42,6 +42,9 @@ import {
   getChatAvatarUrl,
   sortMessagesChronologically,
   markChatIdDeleted,
+  formatMessageTime,
+  formatMessageDateLabel,
+  getMessageDateKey,
 } from '@/services/chat.service';
 import { getMembers } from '@/services/admin.service';
 
@@ -1178,14 +1181,13 @@ export default function AdminChatPage() {
                   </div>
                 ) : (
                   <>
-                    {/* Timestamp separator for chat start */}
-                    <div className="flex items-center justify-center my-2">
-                      <span className="px-3 py-1 rounded-full text-[11px] font-medium bg-slate-200/80 text-slate-600 shadow-2xs">
-                        Conversation started with {activeMember.name}
-                      </span>
-                    </div>
-
                     {activeMessages.map((msg, index) => {
+                      const currentDateKey = getMessageDateKey(msg.createdAt);
+                      const prevDateKey =
+                        index > 0 ? getMessageDateKey(activeMessages[index - 1].createdAt) : null;
+                      const showDateSeparator = index === 0 || currentDateKey !== prevDateKey;
+                      const dateLabel = formatMessageDateLabel(msg.createdAt);
+
                       const isAdmin =
                         msg.senderRole === 'admin' ||
                         String(msg.senderId) === '12' ||
@@ -1194,12 +1196,22 @@ export default function AdminChatPage() {
                         msg.senderName?.toLowerCase().includes('admin');
 
                       return (
-                        <div
-                          key={msg.id || index}
-                          className={`flex items-end gap-2 relative group ${
-                            isAdmin ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
+                        <div key={msg.id || index} className="space-y-3">
+                          {/* Centered Date Separator (e.g. "Today" in center) */}
+                          {showDateSeparator && (
+                            <div className="flex items-center justify-center my-3">
+                              <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-white border border-slate-200/90 text-slate-600 shadow-2xs tracking-wide">
+                                {dateLabel}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Message Row */}
+                          <div
+                            className={`flex items-end gap-2 relative group ${
+                              isAdmin ? 'justify-end' : 'justify-start'
+                            }`}
+                          >
                           {/* Member Avatar beside member messages */}
                           {!isAdmin && (
                             <div className="flex-shrink-0 mb-1">
@@ -1326,7 +1338,7 @@ export default function AdminChatPage() {
                               {msg.isEdited && (
                                 <span className="italic text-[9px] opacity-75">(edited)</span>
                               )}
-                              <span>{msg.createdAt || 'Just now'}</span>
+                              <span>{formatMessageTime(msg.createdAt)}</span>
                               {isAdmin && (
                                 <span title={msg.isRead ? 'Seen' : 'Delivered'}>
                                   {msg.isRead ? (
@@ -1339,7 +1351,8 @@ export default function AdminChatPage() {
                             </div>
                           </div>
                         </div>
-                      );
+                      </div>
+                    );
                     })}
                     <div ref={messagesEndRef} />
                   </>
@@ -1453,14 +1466,14 @@ export default function AdminChatPage() {
                   <Plus className="w-4 h-4 stroke-[2.5]" />
                   <span>Start New Chat</span>
                 </button>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => router.push('/admin/dashboard')}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold transition shadow-2xs"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Back to Dashboard</span>
-                </button>
+                </button> */}
               </div>
             </div>
           )}
