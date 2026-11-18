@@ -92,6 +92,7 @@ export default function AdminChatPage() {
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
 
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -121,9 +122,16 @@ export default function AdminChatPage() {
     return () => window.removeEventListener('click', handleOutsideClick);
   }, [menuOpenId]);
 
-  // Scroll to bottom of message feed
+  // Scroll to bottom of message feed strictly inside messages container (never scrolls the window or page)
   const scrollToBottom = useCallback((smooth = true) => {
-    if (messagesEndRef.current) {
+    if (messagesContainerRef.current) {
+      const el = messagesContainerRef.current;
+      if (smooth) {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      } else {
+        el.scrollTop = el.scrollHeight;
+      }
+    } else if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
         behavior: smooth ? 'smooth' : 'auto',
         block: 'end',
@@ -809,7 +817,7 @@ export default function AdminChatPage() {
   }, [activeId, activeChat, conversations]);
 
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="flex flex-col h-[calc(100dvh-100px)] sm:h-[calc(100dvh-120px)] md:h-[calc(100vh-140px)] min-h-0">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-900/90 text-white px-4 py-2.5 text-sm shadow-xl backdrop-blur transition-all animate-in fade-in slide-in-from-bottom-2">
@@ -818,12 +826,12 @@ export default function AdminChatPage() {
       )}
 
       {/* Main Chat Box Container: fully responsive with 100dvh for mobile/tablet */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col md:flex-row h-[calc(100dvh-100px)] sm:h-[calc(100dvh-120px)] md:h-[calc(100vh-140px)] min-h-[460px]">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col md:flex-row flex-1 min-h-0">
         {/* ================================================================= */}
         {/* LEFT PANEL: Conversation List                                    */}
         {/* ================================================================= */}
         <div
-          className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex flex-col border-r border-slate-200/90 bg-white transition-all ${
+          className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex flex-col border-r border-slate-200/90 bg-white min-h-0 ${
             showMobileChat ? 'hidden md:flex' : 'flex'
           }`}
         >
@@ -874,8 +882,11 @@ export default function AdminChatPage() {
             </div>
           </div>
 
-          {/* Conversations Scroll Area */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+          {/* Conversations Scroll Area: smooth touch scroll */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-slate-100"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {/* Show skeleton ONLY on very initial load when zero data is in cache */}
             {isConversationsLoading && conversations.length === 0 ? (
               <div className="p-6 space-y-4">
@@ -1053,7 +1064,7 @@ export default function AdminChatPage() {
         {/* RIGHT PANEL: Chat View Area                                      */}
         {/* ================================================================= */}
         <div
-          className={`flex-1 flex flex-col bg-slate-50/30 min-w-0 transition-all ${
+          className={`flex-1 flex flex-col bg-slate-50/30 min-w-0 min-h-0 transition-all ${
             !showMobileChat ? 'hidden md:flex' : 'flex'
           }`}
         >
@@ -1140,8 +1151,12 @@ export default function AdminChatPage() {
                 </div>
               </div>
 
-              {/* Messages Thread: optimized padding for mobile & desktop */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 sm:space-y-4">
+              {/* Messages Thread: smooth touch scroll & contained overflow */}
+              <div
+                ref={messagesContainerRef}
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5 space-y-3 sm:space-y-4"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
                 {/* Show spinner ONLY on initial empty load, never during background updates */}
                 {isActiveChatLoading && activeMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
