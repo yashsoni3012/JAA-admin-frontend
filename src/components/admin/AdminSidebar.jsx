@@ -97,7 +97,7 @@ function AdminSidebarInner({
         onClick={handleSidebarClick}
         className={cn(
           'flex h-full flex-col bg-[#EEF1FF] transition-all duration-300 ease-in-out select-none',
-          collapsed ? 'py-4 px-2 items-center cursor-pointer' : 'py-6 px-5'
+          collapsed ? 'py-2.5 px-2 items-center cursor-pointer' : 'py-6 px-5'
         )}
       >
         {/* Top Logo */}
@@ -118,7 +118,7 @@ function AdminSidebarInner({
             <div
               className={cn(
                 'relative flex items-center justify-center transition-all duration-300',
-                collapsed ? 'w-[68px] h-[44px]' : 'w-[191px] h-[70px]'
+                collapsed ? 'w-[58px] h-[34px]' : 'w-[191px] h-[70px]'
               )}
             >
               <img
@@ -127,7 +127,7 @@ function AdminSidebarInner({
                 className={cn(
                   'transition-all duration-300 object-contain',
                   collapsed
-                    ? 'w-[68px] h-auto max-h-[42px]'
+                    ? 'w-[58px] h-auto max-h-[32px]'
                     : 'w-[191px] h-auto'
                 )}
               />
@@ -135,14 +135,14 @@ function AdminSidebarInner({
           </div>
         </div>
 
-        {/* Navigation List: flex-1 min-h-0 with smooth internal scroll guarantees no bottom cutoff */}
+        {/* Navigation List: compact items so all 9 items fit with Logout on any screen */}
         <nav
           aria-label="Admin navigation"
           onScroll={() => setHoveredItem(null)}
           className={cn(
             'flex-1 min-h-0 overflow-y-auto no-scrollbar transition-all duration-300 ease-in-out',
             collapsed
-              ? 'w-full flex flex-col items-center mt-3 space-y-1.5'
+              ? 'w-full flex flex-col items-center mt-2.5 space-y-1'
               : 'w-full mt-6 space-y-2'
           )}
         >
@@ -157,7 +157,7 @@ function AdminSidebarInner({
             if (isMessages) {
               if (collapsed) {
                 return (
-                  <div key={item.href} className="relative">
+                  <div key={item.href} className="relative shrink-0">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -170,7 +170,7 @@ function AdminSidebarInner({
                       onMouseEnter={handleMouseEnter(item.label)}
                       onMouseLeave={handleMouseLeave}
                       className={cn(
-                        'h-12 w-12 justify-center rounded-2xl flex items-center transition-all duration-200 cursor-pointer shrink-0',
+                        'h-10 w-10 justify-center rounded-xl flex items-center transition-all duration-200 cursor-pointer shrink-0',
                         isActive
                           ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
                           : 'text-slate-600 hover:bg-white/70 hover:text-ink'
@@ -286,62 +286,58 @@ function AdminSidebarInner({
 
             // Normal menu items
             return (
-              <div
+              <Link
                 key={item.href}
-                className={cn('relative', collapsed ? '' : 'w-full')}
+                href={item.href}
+                prefetch={true}
+                onMouseEnter={(e) => {
+                  try {
+                    router.prefetch(item.href);
+                  } catch {}
+                  handleMouseEnter(item.label)(e);
+                }}
+                onTouchStart={() => {
+                  try {
+                    router.prefetch(item.href);
+                  } catch {}
+                }}
+                onMouseLeave={handleMouseLeave}
+                onClick={onNavigate}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'group flex items-center transition-all duration-200 cursor-pointer shrink-0',
+                  collapsed
+                    ? 'h-10 w-10 justify-center rounded-xl'
+                    : 'w-full gap-3.5 rounded-full px-5 py-3.5 font-medium',
+                  isActive
+                    ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
+                    : 'text-slate-600 hover:bg-white/70 hover:text-ink'
+                )}
               >
-                <Link
-                  href={item.href}
-                  prefetch={true}
-                  onMouseEnter={(e) => {
-                    try {
-                      router.prefetch(item.href);
-                    } catch {}
-                    handleMouseEnter(item.label)(e);
-                  }}
-                  onTouchStart={() => {
-                    try {
-                      router.prefetch(item.href);
-                    } catch {}
-                  }}
-                  onMouseLeave={handleMouseLeave}
-                  onClick={onNavigate}
-                  aria-current={isActive ? 'page' : undefined}
+                <Icon
                   className={cn(
-                    'group flex items-center transition-all duration-200 cursor-pointer shrink-0',
-                    collapsed
-                      ? 'h-12 w-12 justify-center rounded-2xl'
-                      : 'w-full gap-3.5 rounded-full px-5 py-3.5 font-medium',
-                    isActive
-                      ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
-                      : 'text-slate-600 hover:bg-white/70 hover:text-ink'
+                    'h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                    isActive ? 'text-white' : 'text-slate-500'
+                  )}
+                  aria-hidden="true"
+                />
+                <span
+                  className={cn(
+                    'transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden text-[15px]',
+                    collapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[160px] opacity-100'
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      'h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110',
-                      isActive ? 'text-white' : 'text-slate-500'
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className={cn(
-                      'transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden text-[15px]',
-                      collapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[160px] opacity-100'
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                </Link>
-              </div>
+                  {item.label}
+                </span>
+              </Link>
             );
           })}
         </nav>
 
-        {/* Logout Button: pinned at bottom with shrink-0, always visible */}
+        {/* Logout Button: pinned at bottom with shrink-0, always fully visible with margin */}
         <div
           className={cn(
-            'shrink-0 pt-3 transition-all duration-300 ease-in-out',
+            'shrink-0 pt-2 pb-1 transition-all duration-300 ease-in-out',
             collapsed ? 'w-full flex justify-center' : 'w-full px-1'
           )}
         >
@@ -353,7 +349,7 @@ function AdminSidebarInner({
             className={cn(
               'flex items-center justify-center bg-gradient-to-b from-[#FF1F1F] to-[#FF5A5F] hover:brightness-105 text-white shadow-md transition-all duration-300 ease-in-out hover:shadow-lg cursor-pointer active:scale-95 shrink-0',
               collapsed
-                ? 'h-12 w-12 rounded-2xl p-0'
+                ? 'h-10 w-10 rounded-xl p-0'
                 : 'w-full gap-2.5 rounded-full py-3.5 px-6 text-[15px] font-semibold'
             )}
           >
@@ -378,7 +374,7 @@ function AdminSidebarInner({
         <div
           role="tooltip"
           style={{ top: hoveredItem.top }}
-          className="pointer-events-none fixed left-[90px] -translate-y-1/2 z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 ease-out"
+          className="pointer-events-none fixed left-[88px] -translate-y-1/2 z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 ease-out"
         >
           <div
             className={cn(
@@ -411,7 +407,7 @@ function AdminSidebarInner({
           />
           <div
             style={{ top: flyoutTop }}
-            className="fixed left-[90px] z-[9999] w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95"
+            className="fixed left-[88px] z-[9999] w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95"
           >
             <Link
               href="/admin/messages?tab=broadcast"
