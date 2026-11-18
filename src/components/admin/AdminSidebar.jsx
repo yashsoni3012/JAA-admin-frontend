@@ -34,6 +34,11 @@ function AdminSidebarInner({
   const tab = searchParams?.get('tab');
   const isGroupActive = tab === 'group' || tab === 'groups' || tab === 'group_message';
 
+  // Close collapsed flyout when route changes or when un-collapsing
+  useEffect(() => {
+    setCollapsedFlyoutOpen(false);
+  }, [pathname, collapsed]);
+
   // Eagerly prefetch all admin routes in the background on mount for instant zero-latency navigation
   useEffect(() => {
     SIDEBAR_NAV.forEach((item) => {
@@ -75,9 +80,8 @@ function AdminSidebarInner({
         onClick={handleSidebarClick}
         className={cn(
           'flex h-full flex-col bg-[#EEF1FF] py-8 transition-all duration-300 ease-in-out select-none',
-          collapsed ? 'px-1.5 items-center cursor-pointer' : 'px-5'
+          collapsed ? 'px-1.5 items-center cursor-pointer overflow-visible' : 'px-5'
         )}
-        title={collapsed ? 'Click to expand sidebar' : undefined}
       >
         {/* Top Logo */}
         <div
@@ -87,11 +91,10 @@ function AdminSidebarInner({
           )}
         >
           <div
-            className="flex items-center overflow-hidden cursor-pointer"
+            className="flex items-center cursor-pointer relative group"
             onClick={() => {
               if (collapsed && onToggleCollapse) onToggleCollapse();
             }}
-            title={collapsed ? 'Click to expand sidebar' : 'Jewellers Association Ahmedabad'}
           >
             <div
               className={cn(
@@ -110,6 +113,18 @@ function AdminSidebarInner({
                 )}
               />
             </div>
+
+            {collapsed && (
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3.5 z-50 opacity-0 invisible -translate-x-1 group-hover:opacity-100 group-hover:visible group-hover:translate-x-0 transition-all duration-150 ease-out"
+              >
+                <div className="relative flex items-center bg-[#1E2580] text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl shadow-[#1E2580]/20 whitespace-nowrap border border-white/10 tracking-wide">
+                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#1E2580] rotate-45 border-l border-b border-white/10" />
+                  <span className="relative z-10 select-none">Expand Sidebar</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -117,8 +132,10 @@ function AdminSidebarInner({
         <nav
           aria-label="Admin navigation"
           className={cn(
-            'mt-8 flex-1 space-y-2 overflow-y-auto no-scrollbar transition-all duration-300 ease-in-out',
-            collapsed ? 'w-full flex flex-col items-center' : 'w-full'
+            'mt-8 flex-1 transition-all duration-300 ease-in-out',
+            collapsed
+              ? 'w-full flex flex-col items-center space-y-2 overflow-visible'
+              : 'w-full space-y-2 overflow-y-auto no-scrollbar'
           )}
         >
           {SIDEBAR_NAV.map((item) => {
@@ -132,13 +149,16 @@ function AdminSidebarInner({
             if (isMessages) {
               if (collapsed) {
                 return (
-                  <div key={item.href} className="relative">
+                  <div
+                    key={item.href}
+                    className="relative group"
+                    onMouseLeave={() => setCollapsedFlyoutOpen(false)}
+                  >
                     <button
                       type="button"
                       onClick={() => setCollapsedFlyoutOpen((prev) => !prev)}
-                      title="Messages: Broadcast & Group Message"
                       className={cn(
-                        'h-14 w-14 justify-center rounded-2xl group flex items-center transition-all duration-200 cursor-pointer',
+                        'h-14 w-14 justify-center rounded-2xl flex items-center transition-all duration-200 cursor-pointer',
                         isActive
                           ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
                           : 'text-slate-600 hover:bg-white/70 hover:text-ink'
@@ -153,8 +173,21 @@ function AdminSidebarInner({
                       />
                     </button>
 
+                    {/* Tooltip on hover when flyout is closed */}
+                    {!collapsedFlyoutOpen && (
+                      <div
+                        role="tooltip"
+                        className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3.5 z-50 opacity-0 invisible -translate-x-1 group-hover:opacity-100 group-hover:visible group-hover:translate-x-0 transition-all duration-150 ease-out"
+                      >
+                        <div className="relative flex items-center bg-[#1E2580] text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl shadow-[#1E2580]/20 whitespace-nowrap border border-white/10 tracking-wide">
+                          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#1E2580] rotate-45 border-l border-b border-white/10" />
+                          <span className="relative z-10 select-none">Messages</span>
+                        </div>
+                      </div>
+                    )}
+
                     {collapsedFlyoutOpen && (
-                      <div className="absolute left-full top-0 ml-3 z-50 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95">
+                      <div className="absolute left-full top-0 ml-3.5 z-50 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95">
                         <Link
                           href="/admin/messages?tab=broadcast"
                           onClick={() => {
@@ -291,49 +324,64 @@ function AdminSidebarInner({
 
             // Normal menu items
             return (
-              <Link
+              <div
                 key={item.href}
-                href={item.href}
-                prefetch={true}
-                onMouseEnter={() => {
-                  try {
-                    router.prefetch(item.href);
-                  } catch {}
-                }}
-                onTouchStart={() => {
-                  try {
-                    router.prefetch(item.href);
-                  } catch {}
-                }}
-                onClick={onNavigate}
-                title={item.label}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'group flex items-center transition-all duration-200 cursor-pointer',
-                  collapsed
-                    ? 'h-14 w-14 justify-center rounded-2xl'
-                    : 'w-full gap-3.5 rounded-full px-5 py-3.5 font-medium',
-                  isActive
-                    ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
-                    : 'text-slate-600 hover:bg-white/70 hover:text-ink'
-                )}
+                className={cn('relative', collapsed ? 'group' : 'w-full')}
               >
-                <Icon
+                <Link
+                  href={item.href}
+                  prefetch={true}
+                  onMouseEnter={() => {
+                    try {
+                      router.prefetch(item.href);
+                    } catch {}
+                  }}
+                  onTouchStart={() => {
+                    try {
+                      router.prefetch(item.href);
+                    } catch {}
+                  }}
+                  onClick={onNavigate}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
-                    isActive ? 'text-white' : 'text-slate-500'
-                  )}
-                  aria-hidden="true"
-                />
-                <span
-                  className={cn(
-                    'transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden text-[15px]',
-                    collapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[160px] opacity-100'
+                    'flex items-center transition-all duration-200 cursor-pointer',
+                    collapsed
+                      ? 'h-14 w-14 justify-center rounded-2xl'
+                      : 'w-full gap-3.5 rounded-full px-5 py-3.5 font-medium',
+                    isActive
+                      ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
+                      : 'text-slate-600 hover:bg-white/70 hover:text-ink'
                   )}
                 >
-                  {item.label}
-                </span>
-              </Link>
+                  <Icon
+                    className={cn(
+                      'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                      isActive ? 'text-white' : 'text-slate-500'
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className={cn(
+                      'transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden text-[15px]',
+                      collapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[160px] opacity-100'
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+
+                {collapsed && (
+                  <div
+                    role="tooltip"
+                    className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3.5 z-50 opacity-0 invisible -translate-x-1 group-hover:opacity-100 group-hover:visible group-hover:translate-x-0 transition-all duration-150 ease-out"
+                  >
+                    <div className="relative flex items-center bg-[#1E2580] text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl shadow-[#1E2580]/20 whitespace-nowrap border border-white/10 tracking-wide">
+                      <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#1E2580] rotate-45 border-l border-b border-white/10" />
+                      <span className="relative z-10 select-none">{item.label}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
@@ -341,14 +389,13 @@ function AdminSidebarInner({
         {/* Logout Button */}
         <div
           className={cn(
-            'pt-4 transition-all duration-300 ease-in-out',
+            'pt-4 transition-all duration-300 ease-in-out relative group',
             collapsed ? 'w-full flex justify-center' : 'px-1'
           )}
         >
           <button
             type="button"
             onClick={handleLogout}
-            title={collapsed ? 'Logout' : undefined}
             className={cn(
               'flex items-center justify-center bg-gradient-to-b from-[#FF1F1F] to-[#FF5A5F] hover:brightness-105 text-white shadow-md transition-all duration-300 ease-in-out hover:shadow-lg cursor-pointer active:scale-95',
               collapsed
@@ -369,6 +416,18 @@ function AdminSidebarInner({
               Logout
             </span>
           </button>
+
+          {collapsed && (
+            <div
+              role="tooltip"
+              className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3.5 z-50 opacity-0 invisible -translate-x-1 group-hover:opacity-100 group-hover:visible group-hover:translate-x-0 transition-all duration-150 ease-out"
+            >
+              <div className="relative flex items-center bg-[#DC2626] text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl shadow-red-500/20 whitespace-nowrap border border-white/10 tracking-wide">
+                <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#DC2626] rotate-45 border-l border-b border-white/10" />
+                <span className="relative z-10 select-none">Logout</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

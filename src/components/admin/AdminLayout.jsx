@@ -88,8 +88,8 @@ export default function AdminLayout({ children }) {
       {/* Desktop sidebar with smooth width transition */}
       <aside
         className={cn(
-          'sticky top-0 hidden h-screen shrink-0 lg:block bg-[#EEF1FF] transition-[width] duration-300 ease-in-out z-20 overflow-hidden',
-          collapsed ? 'w-[84px]' : 'w-[260px]'
+          'sticky top-0 hidden h-screen shrink-0 lg:block bg-[#EEF1FF] transition-[width] duration-300 ease-in-out',
+          collapsed ? 'w-[84px] z-30 overflow-visible' : 'w-[260px] z-20 overflow-hidden'
         )}
       >
         <AdminSidebar
