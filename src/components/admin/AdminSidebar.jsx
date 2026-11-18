@@ -96,14 +96,14 @@ function AdminSidebarInner({
       <div
         onClick={handleSidebarClick}
         className={cn(
-          'flex h-full flex-col bg-[#EEF1FF] transition-all duration-300 ease-in-out select-none',
-          collapsed ? 'py-2.5 px-2 items-center cursor-pointer' : 'py-6 px-5'
+          'flex h-full flex-col bg-[#EEF1FF] py-6 transition-all duration-300 ease-in-out select-none',
+          collapsed ? 'px-2 items-center cursor-pointer' : 'px-5'
         )}
       >
-        {/* Top Logo */}
+        {/* Top Logo: exact same height and vertical position in both opened and collapsed */}
         <div
           className={cn(
-            'transition-all duration-300 ease-in-out flex items-center shrink-0',
+            'transition-all duration-300 ease-in-out flex items-center h-[70px] shrink-0',
             collapsed ? 'justify-center w-full px-0' : 'justify-start px-1'
           )}
         >
@@ -118,7 +118,7 @@ function AdminSidebarInner({
             <div
               className={cn(
                 'relative flex items-center justify-center transition-all duration-300',
-                collapsed ? 'w-[58px] h-[34px]' : 'w-[191px] h-[70px]'
+                collapsed ? 'w-[72px] h-[52px]' : 'w-[191px] h-[70px]'
               )}
             >
               <img
@@ -127,7 +127,7 @@ function AdminSidebarInner({
                 className={cn(
                   'transition-all duration-300 object-contain',
                   collapsed
-                    ? 'w-[58px] h-auto max-h-[32px]'
+                    ? 'w-[72px] h-auto max-h-[50px]'
                     : 'w-[191px] h-auto'
                 )}
               />
@@ -135,15 +135,13 @@ function AdminSidebarInner({
           </div>
         </div>
 
-        {/* Navigation List: compact items so all 9 items fit with Logout on any screen */}
+        {/* Navigation List: exact same mt-6 and space-y-2 so every icon stays at identical Y-position */}
         <nav
           aria-label="Admin navigation"
           onScroll={() => setHoveredItem(null)}
           className={cn(
-            'flex-1 min-h-0 overflow-y-auto no-scrollbar transition-all duration-300 ease-in-out',
-            collapsed
-              ? 'w-full flex flex-col items-center mt-2.5 space-y-1'
-              : 'w-full mt-6 space-y-2'
+            'mt-6 space-y-2 flex-1 min-h-0 overflow-y-auto no-scrollbar transition-all duration-300 ease-in-out',
+            collapsed ? 'w-full flex flex-col items-center' : 'w-full'
           )}
         >
           {SIDEBAR_NAV.map((item) => {
@@ -170,7 +168,7 @@ function AdminSidebarInner({
                       onMouseEnter={handleMouseEnter(item.label)}
                       onMouseLeave={handleMouseLeave}
                       className={cn(
-                        'h-10 w-10 justify-center rounded-xl flex items-center transition-all duration-200 cursor-pointer shrink-0',
+                        'h-[50px] w-[50px] justify-center rounded-2xl flex items-center transition-all duration-200 cursor-pointer shrink-0',
                         isActive
                           ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
                           : 'text-slate-600 hover:bg-white/70 hover:text-ink'
@@ -178,7 +176,7 @@ function AdminSidebarInner({
                     >
                       <Icon
                         className={cn(
-                          'h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                          'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
                           isActive ? 'text-white' : 'text-slate-500'
                         )}
                         aria-hidden="true"
@@ -307,7 +305,7 @@ function AdminSidebarInner({
                 className={cn(
                   'group flex items-center transition-all duration-200 cursor-pointer shrink-0',
                   collapsed
-                    ? 'h-10 w-10 justify-center rounded-xl'
+                    ? 'h-[50px] w-[50px] justify-center rounded-2xl'
                     : 'w-full gap-3.5 rounded-full px-5 py-3.5 font-medium',
                   isActive
                     ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
@@ -316,7 +314,7 @@ function AdminSidebarInner({
               >
                 <Icon
                   className={cn(
-                    'h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                    'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
                     isActive ? 'text-white' : 'text-slate-500'
                   )}
                   aria-hidden="true"
@@ -334,10 +332,10 @@ function AdminSidebarInner({
           })}
         </nav>
 
-        {/* Logout Button: pinned at bottom with shrink-0, always fully visible with margin */}
+        {/* Logout Button: exact same pt-4 and Y position in both opened and collapsed */}
         <div
           className={cn(
-            'shrink-0 pt-2 pb-1 transition-all duration-300 ease-in-out',
+            'shrink-0 pt-4 transition-all duration-300 ease-in-out',
             collapsed ? 'w-full flex justify-center' : 'w-full px-1'
           )}
         >
@@ -349,11 +347,11 @@ function AdminSidebarInner({
             className={cn(
               'flex items-center justify-center bg-gradient-to-b from-[#FF1F1F] to-[#FF5A5F] hover:brightness-105 text-white shadow-md transition-all duration-300 ease-in-out hover:shadow-lg cursor-pointer active:scale-95 shrink-0',
               collapsed
-                ? 'h-10 w-10 rounded-xl p-0'
+                ? 'h-[50px] w-[50px] rounded-2xl p-0'
                 : 'w-full gap-2.5 rounded-full py-3.5 px-6 text-[15px] font-semibold'
             )}
           >
-            <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <LogOut className="h-6 w-6 shrink-0" aria-hidden="true" />
 
             <span
               className={cn(
@@ -374,7 +372,7 @@ function AdminSidebarInner({
         <div
           role="tooltip"
           style={{ top: hoveredItem.top }}
-          className="pointer-events-none fixed left-[88px] -translate-y-1/2 z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 ease-out"
+          className="pointer-events-none fixed left-[92px] -translate-y-1/2 z-[9999] animate-in fade-in-0 zoom-in-95 duration-150 ease-out"
         >
           <div
             className={cn(
@@ -407,7 +405,7 @@ function AdminSidebarInner({
           />
           <div
             style={{ top: flyoutTop }}
-            className="fixed left-[88px] z-[9999] w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95"
+            className="fixed left-[92px] z-[9999] w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl animate-in fade-in-50 zoom-in-95"
           >
             <Link
               href="/admin/messages?tab=broadcast"
