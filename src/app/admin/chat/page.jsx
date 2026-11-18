@@ -820,7 +820,7 @@ export default function AdminChatPage() {
       {/* Top Header Bar with Back to Dashboard Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
+          {/* <button
             type="button"
             onClick={() => router.push('/admin/dashboard')}
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs group"
@@ -828,14 +828,14 @@ export default function AdminChatPage() {
           >
             <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
             <span>Back to Dashboard</span>
-          </button>
-          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-          <div className="hidden sm:flex items-center gap-2">
+          </button> */}
+          {/* <div className="h-4 w-px bg-slate-200 hidden sm:block" /> */}
+          {/* <div className="hidden sm:flex items-center gap-2">
             <span className="text-xs text-slate-400 font-medium">Chat & Member Messaging</span>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#EEF1FF] text-[#2832A4]">
               {conversations.length} {conversations.length === 1 ? 'chat' : 'chats'}
             </span>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -853,25 +853,25 @@ export default function AdminChatPage() {
           <div className="p-4 border-b border-slate-200/80 bg-slate-50/50 flex-shrink-0">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <button
+                {/* <button
                   type="button"
                   onClick={() => router.push('/admin/dashboard')}
                   className="p-1.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition shadow-2xs"
                   title="Back to Dashboard"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                </button>
+                </button> */}
                 <div className="p-2 rounded-xl bg-[#EEF1FF] text-[#2832A4]">
                   <MessageCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-ink">Member Chats</h2>
-                  <p className="text-[11px] text-slate-500">Direct messaging</p>
+                  <h2 className="text-lg font-bold text-ink">Member Chats</h2>
+                  {/* <p className="text-[11px] text-slate-500">Direct messaging</p> */}
                 </div>
               </div>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#EEF1FF] text-[#2832A4]">
-                {conversations.length}
-              </span>
+              {/* <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#EEF1FF] text-[#2832A4]">
+                {conversations.length} Chats
+              </span> */}
             </div>
 
             {/* Search Input */}
@@ -1091,11 +1091,11 @@ export default function AdminChatPage() {
                       setShowMobileChat(false);
                       updateActiveId(null);
                     }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-2xs group"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-2xs group"
                     title="Back to member list"
                   >
                     <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
-                    <span>Back</span>
+                    {/* <span>Back</span> */}
                   </button>
 
                   <div className="relative flex-shrink-0">
@@ -1426,7 +1426,8 @@ export default function AdminChatPage() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={`Message ${activeMember.name || 'member'}... (Enter to send)`}
+                    // placeholder={`Message ${activeMember.name || 'member'}... (Enter to send)`}
+                    placeholder={`Type a Message...`}
                     className="w-full resize-none max-h-32 min-h-[42px] px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 focus:border-[#2832A4] transition placeholder:text-slate-400"
                   />
                 </div>
