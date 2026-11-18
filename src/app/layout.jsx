@@ -2,6 +2,7 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import QueryProvider from '@/providers/QueryProvider';
+import ChunkRecovery from '@/components/common/ChunkRecovery';
 import { SITE } from '@/config/site';
 
 export const metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
+        <ChunkRecovery />
         <QueryProvider>
           <AuthProvider>
             <ToastProvider>{children}</ToastProvider>
