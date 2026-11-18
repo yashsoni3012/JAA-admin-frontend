@@ -110,6 +110,8 @@ export default function AdminChatPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const isNearBottomRef = useRef(true);
+
   // Close 3-dots dropdown menu on outside click
   useEffect(() => {
     if (menuOpenId === null) return;
@@ -122,6 +124,14 @@ export default function AdminChatPage() {
     return () => window.removeEventListener('click', handleOutsideClick);
   }, [menuOpenId]);
 
+  // Track scroll position inside message container
+  const handleMessagesScroll = useCallback(() => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 120;
+    }
+  }, []);
+
   // Scroll to bottom of message feed strictly inside messages container (never scrolls the window or page)
   const scrollToBottom = useCallback((smooth = true) => {
     if (messagesContainerRef.current) {
@@ -131,11 +141,6 @@ export default function AdminChatPage() {
       } else {
         el.scrollTop = el.scrollHeight;
       }
-    } else if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'end',
-      });
     }
   }, []);
 
@@ -275,12 +280,24 @@ export default function AdminChatPage() {
     });
   }, [rawConversations, activeChat, activeMessages, activeId]);
 
-  // Auto-scroll when messages change
+  // Auto-scroll logic: scroll to bottom on initial open, conversation switch, or when near bottom
+  const prevActiveIdRef = useRef(activeId);
+  const prevMsgCountRef = useRef(activeMessages.length);
+
   useEffect(() => {
-    if (activeMessages.length > 0) {
-      scrollToBottom(true);
+    const isNewConversation = prevActiveIdRef.current !== activeId;
+    const hasNewMessages = activeMessages.length > prevMsgCountRef.current;
+
+    prevActiveIdRef.current = activeId;
+    prevMsgCountRef.current = activeMessages.length;
+
+    if (isNewConversation) {
+      isNearBottomRef.current = true;
+      setTimeout(() => scrollToBottom(false), 30);
+    } else if (hasNewMessages && isNearBottomRef.current) {
+      setTimeout(() => scrollToBottom(true), 30);
     }
-  }, [activeMessages.length, scrollToBottom]);
+  }, [activeId, activeMessages.length, scrollToBottom]);
 
   // =========================================================================
   // 3. TANSTACK QUERY: MEMBERS FOR "START NEW CHAT" MODAL
@@ -817,7 +834,7 @@ export default function AdminChatPage() {
   }, [activeId, activeChat, conversations]);
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-100px)] sm:h-[calc(100dvh-120px)] md:h-[calc(100vh-140px)] min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 h-full w-full">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-900/90 text-white px-4 py-2.5 text-sm shadow-xl backdrop-blur transition-all animate-in fade-in slide-in-from-bottom-2">
@@ -1154,8 +1171,13 @@ export default function AdminChatPage() {
               {/* Messages Thread: smooth touch scroll & contained overflow */}
               <div
                 ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
                 className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5 space-y-3 sm:space-y-4"
-                style={{ WebkitOverflowScrolling: 'touch' }}
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-y',
+                  overscrollBehaviorY: 'contain',
+                }}
               >
                 {/* Show spinner ONLY on initial empty load, never during background updates */}
                 {isActiveChatLoading && activeMessages.length === 0 ? (

@@ -83,8 +83,10 @@ export default function AdminLayout({ children }) {
     }
   }, []);
 
+  const isChatPage = pathname === ROUTES.CHAT || pathname?.startsWith(`${ROUTES.CHAT}`);
+
   return (
-    <div className="flex min-h-screen bg-[#EEF1FF]">
+    <div className={cn("flex min-h-screen bg-[#EEF1FF]", isChatPage && "h-[100dvh] max-h-[100dvh] overflow-hidden")}>
       {/* Desktop sidebar with smooth width transition */}
       <aside
         className={cn(
@@ -105,7 +107,7 @@ export default function AdminLayout({ children }) {
         onLogoutClick={() => setIsLogoutOpen(true)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col bg-[#EEF1FF] transition-all duration-300">
+      <div className={cn("flex min-w-0 flex-1 flex-col bg-[#EEF1FF] transition-all duration-300", isChatPage && "h-[100dvh] max-h-[100dvh] overflow-hidden")}>
         {/* Topbar */}
         <AdminHeader
           title={customTitle || getPageTitle(pathname)}
@@ -115,12 +117,19 @@ export default function AdminLayout({ children }) {
         />
 
         {/* Main Content Area: Instant render with zero suspense lag */}
-        <main className="flex-1 px-3.5 sm:px-4 pb-6 sm:pb-8 md:px-8 md:pb-10">
+        <main className={cn(
+          "flex-1 px-3.5 sm:px-4 md:px-8",
+          isChatPage
+            ? "flex flex-col min-h-0 pb-3 sm:pb-4 overflow-hidden"
+            : "pb-6 sm:pb-8 md:pb-10"
+        )}>
           {children}
         </main>
 
-        {/* Global Footer */}
-        <Footer className="mt-auto border-t border-slate-200/60 bg-transparent py-4" />
+        {/* Global Footer (omitted on Chat page for app-like zero-overflow experience) */}
+        {!isChatPage && (
+          <Footer className="mt-auto border-t border-slate-200/60 bg-transparent py-4" />
+        )}
       </div>
 
       {/* Logout Confirmation Modal matching the design */}
