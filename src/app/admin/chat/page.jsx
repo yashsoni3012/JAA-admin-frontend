@@ -817,30 +817,8 @@ export default function AdminChatPage() {
         </div>
       )}
 
-      {/* Top Header Bar with Back to Dashboard Navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* <button
-            type="button"
-            onClick={() => router.push('/admin/dashboard')}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs group"
-            title="Back to Dashboard"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Dashboard</span>
-          </button> */}
-          {/* <div className="h-4 w-px bg-slate-200 hidden sm:block" /> */}
-          {/* <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium">Chat & Member Messaging</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#EEF1FF] text-[#2832A4]">
-              {conversations.length} {conversations.length === 1 ? 'chat' : 'chats'}
-            </span>
-          </div> */}
-        </div>
-      </div>
-
-      {/* Main Chat Box Container */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col md:flex-row h-[calc(100vh-215px)] min-h-[560px]">
+      {/* Main Chat Box Container: fully responsive with 100dvh for mobile/tablet */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col md:flex-row h-[calc(100dvh-100px)] sm:h-[calc(100dvh-120px)] md:h-[calc(100vh-140px)] min-h-[460px]">
         {/* ================================================================= */}
         {/* LEFT PANEL: Conversation List                                    */}
         {/* ================================================================= */}
@@ -1024,7 +1002,7 @@ export default function AdminChatPage() {
                         className={`p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all ${
                           menuOpenId === conv.id
                             ? 'opacity-100 bg-slate-100 text-slate-700 ring-1 ring-slate-200'
-                            : 'opacity-0 group-hover:opacity-100'
+                            : 'opacity-70 sm:opacity-0 sm:group-hover:opacity-100'
                         }`}
                         title="Chat options"
                       >
@@ -1081,9 +1059,9 @@ export default function AdminChatPage() {
         >
           {activeId && activeMember ? (
             <>
-              {/* Chat Header */}
-              <div className="p-3.5 sm:p-4 bg-white border-b border-slate-200/90 flex items-center justify-between shadow-xs">
-                <div className="flex items-center gap-3 min-w-0">
+              {/* Chat Header: fully responsive on all screens */}
+              <div className="px-3 py-2.5 sm:px-4 sm:py-3.5 bg-white border-b border-slate-200/90 flex items-center justify-between gap-2 shadow-xs shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                   {/* Back button to return to member list / close conversation view */}
                   <button
                     type="button"
@@ -1091,42 +1069,43 @@ export default function AdminChatPage() {
                       setShowMobileChat(false);
                       updateActiveId(null);
                     }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-2xs group"
+                    className="p-2 sm:p-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition shadow-2xs shrink-0 active:scale-95"
                     title="Back to member list"
                   >
-                    <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-0.5 transition-transform" />
-                    {/* <span>Back</span> */}
+                    <ArrowLeft className="w-4 h-4 text-slate-600" />
                   </button>
 
-                  <div className="relative flex-shrink-0">
+                  <div className="relative shrink-0">
                     <Avatar
                       name={activeMember.name || 'Member'}
                       src={getChatAvatarUrl(activeMember.avatar)}
-                      size="md"
-                      className="ring-2 ring-slate-100"
+                      size="sm"
+                      className="sm:w-10 sm:h-10 ring-2 ring-slate-100"
                     />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 ring-2 ring-white" />
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
                       <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
                         {activeMember.name || 'Member'}
                       </h3>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                         Active Now
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
-                      {activeMember.email && (
-                        <span className="truncate flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          {activeMember.email}
+                    <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
+                      {activeMember.memberId && (
+                        <span className="font-semibold text-slate-700 shrink-0">
+                          #{activeMember.memberId}
                         </span>
                       )}
-                      {activeMember.memberId && (
-                        <span className="font-medium text-slate-600">
-                          (ID: {activeMember.memberId})
+                      {activeMember.memberId && activeMember.email && (
+                        <span className="text-slate-300">•</span>
+                      )}
+                      {activeMember.email && (
+                        <span className="truncate">
+                          {activeMember.email}
                         </span>
                       )}
                     </div>
@@ -1134,14 +1113,14 @@ export default function AdminChatPage() {
                 </div>
 
                 {/* Top Action Buttons */}
-                <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
                       refetchActiveChat();
                       refetchConversations();
                     }}
-                    className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
+                    className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition active:scale-95"
                     title="Refresh chat"
                   >
                     <RefreshCw className="w-4 h-4" />
@@ -1153,7 +1132,7 @@ export default function AdminChatPage() {
                       setChatToDelete(activeChat);
                       setIsDeleteModalOpen(true);
                     }}
-                    className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                    className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition active:scale-95"
                     title="Delete conversation"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1161,8 +1140,8 @@ export default function AdminChatPage() {
                 </div>
               </div>
 
-              {/* Messages Thread */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {/* Messages Thread: optimized padding for mobile & desktop */}
+              <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 sm:space-y-4">
                 {/* Show spinner ONLY on initial empty load, never during background updates */}
                 {isActiveChatLoading && activeMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
@@ -1224,10 +1203,10 @@ export default function AdminChatPage() {
                             </div>
                           )}
 
-                          {/* Hover Action Bar: Edit & Delete Icons */}
+                          {/* Action Bar: Edit & Delete Icons (visible on mobile touch, hover on desktop) */}
                           {editingMessageId !== msg.id && (
                             <div
-                              className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-1 bg-white border border-slate-200/90 rounded-xl px-1.5 py-1 shadow-md z-10 self-center ${
+                              className={`opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-1 bg-white border border-slate-200/90 rounded-xl px-1.5 py-1 shadow-md z-10 self-center ${
                                 isAdmin ? 'order-first mr-1' : 'order-last ml-1'
                               }`}
                             >
@@ -1394,10 +1373,10 @@ export default function AdminChatPage() {
                 </div>
               )}
 
-              {/* Message Input Footer */}
+              {/* Message Input Footer: responsive input & action buttons */}
               <form
                 onSubmit={handleSendMessage}
-                className="p-3 sm:p-4 bg-white border-t border-slate-200 flex items-end gap-2"
+                className="p-2.5 sm:p-3.5 bg-white border-t border-slate-200/90 flex items-end gap-1.5 sm:gap-2 shrink-0"
               >
                 {/* Hidden File Picker */}
                 <input
@@ -1412,23 +1391,22 @@ export default function AdminChatPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition flex-shrink-0"
+                  className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition shrink-0 active:scale-95"
                   title="Attach image or file"
                 >
                   <Paperclip className="w-5 h-5" />
                 </button>
 
                 {/* Message Textarea */}
-                <div className="flex-1 relative">
+                <div className="flex-1 relative min-w-0">
                   <textarea
                     ref={textareaRef}
                     rows={1}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    // placeholder={`Message ${activeMember.name || 'member'}... (Enter to send)`}
-                    placeholder={`Type a Message...`}
-                    className="w-full resize-none max-h-32 min-h-[42px] px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 focus:border-[#2832A4] transition placeholder:text-slate-400"
+                    placeholder="Type a Message..."
+                    className="w-full resize-none max-h-32 min-h-[40px] sm:min-h-[44px] px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2832A4]/20 focus:border-[#2832A4] transition placeholder:text-slate-400"
                   />
                 </div>
 
@@ -1436,7 +1414,7 @@ export default function AdminChatPage() {
                 <button
                   type="submit"
                   disabled={(!inputText.trim() && !selectedFile) || sendMessageMutation.isPending}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-xl bg-[#2832A4] hover:bg-[#1E2580] disabled:bg-slate-200 disabled:text-slate-400 text-white font-medium text-xs sm:text-sm transition flex items-center justify-center gap-1.5 flex-shrink-0 shadow-sm"
+                  className="h-10 sm:h-11 px-3.5 sm:px-4 rounded-xl bg-[#2832A4] hover:bg-[#1E2580] disabled:bg-slate-200 disabled:text-slate-400 text-white font-medium text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shrink-0 shadow-sm active:scale-95"
                 >
                   {sendMessageMutation.isPending ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
