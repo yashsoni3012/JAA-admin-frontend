@@ -96,19 +96,19 @@ function AdminSidebarInner({
       <div
         onClick={handleSidebarClick}
         className={cn(
-          'flex h-full flex-col bg-[#EEF1FF] py-6 transition-all duration-300 ease-in-out select-none',
-          collapsed ? 'px-2 items-center cursor-pointer' : 'px-5'
+          'flex h-full flex-col bg-[#EEF1FF] py-6 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] select-none',
+          collapsed ? 'px-[17px] items-center cursor-pointer' : 'px-5 items-start'
         )}
       >
-        {/* Top Logo: exact same height and vertical position in both opened and collapsed */}
+        {/* Top Logo: smoothly animates dimensions between opened and collapsed */}
         <div
           className={cn(
-            'transition-all duration-300 ease-in-out flex items-center h-[70px] shrink-0',
-            collapsed ? 'justify-center w-full px-0' : 'justify-start px-1'
+            'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center h-[70px] shrink-0 w-full',
+            collapsed ? 'justify-center px-0' : 'justify-start px-1'
           )}
         >
           <div
-            className="flex items-center cursor-pointer"
+            className="flex items-center cursor-pointer overflow-hidden"
             onClick={() => {
               if (collapsed && onToggleCollapse) onToggleCollapse();
             }}
@@ -117,15 +117,15 @@ function AdminSidebarInner({
           >
             <div
               className={cn(
-                'relative flex items-center justify-center transition-all duration-300',
-                collapsed ? 'w-[72px] h-[52px]' : 'w-[191px] h-[70px]'
+                'relative flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                collapsed ? 'w-[50px] h-[50px]' : 'w-[191px] h-[70px]'
               )}
             >
               <img
                 src="/uploads/jaa-logo-1793261989412.png"
                 alt="Jewellers Association Ahmedabad"
                 className={cn(
-                  'transition-all duration-300 object-contain',
+                  'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] object-contain',
                   collapsed
                     ? 'w-[72px] h-auto max-h-[50px]'
                     : 'w-[191px] h-auto'
@@ -140,7 +140,7 @@ function AdminSidebarInner({
           aria-label="Admin navigation"
           onScroll={() => setHoveredItem(null)}
           className={cn(
-            'mt-6 space-y-2 flex-1 min-h-0 overflow-y-auto no-scrollbar transition-all duration-300 ease-in-out',
+            'mt-6 space-y-2 flex-1 min-h-0 overflow-y-auto no-scrollbar transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
             collapsed ? 'w-full flex flex-col items-center' : 'w-full'
           )}
         >
@@ -153,68 +153,72 @@ function AdminSidebarInner({
 
             // 1. Messages item with dropdown (Broadcast default & Group Message)
             if (isMessages) {
-              if (collapsed) {
-                return (
-                  <div key={item.href} className="relative shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setFlyoutTop(rect.top);
-                        setHoveredItem(null);
-                        setCollapsedFlyoutOpen((prev) => !prev);
-                      }}
-                      onMouseEnter={handleMouseEnter(item.label)}
-                      onMouseLeave={handleMouseLeave}
-                      className={cn(
-                        'h-[50px] w-[50px] justify-center rounded-2xl flex items-center transition-all duration-200 cursor-pointer shrink-0',
-                        isActive
-                          ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
-                          : 'text-slate-600 hover:bg-white/70 hover:text-ink'
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
-                          isActive ? 'text-white' : 'text-slate-500'
-                        )}
-                        aria-hidden="true"
-                      />
-                    </button>
-                  </div>
-                );
-              }
-
               return (
-                <div key={item.href} className="w-full space-y-1">
+                <div
+                  key={item.href}
+                  className={cn(
+                    'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shrink-0',
+                    collapsed ? 'w-[50px]' : 'w-full'
+                  )}
+                >
                   <div className="relative flex items-center">
                     <Link
                       href="/admin/messages?tab=broadcast"
                       prefetch={true}
-                      onClick={() => {
-                        if (onNavigate) onNavigate();
+                      onClick={(e) => {
+                        if (collapsed) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setFlyoutTop(rect.top);
+                          setHoveredItem(null);
+                          setCollapsedFlyoutOpen((prev) => !prev);
+                        } else {
+                          if (onNavigate) onNavigate();
+                        }
                       }}
+                      onMouseEnter={(e) => {
+                        if (collapsed) handleMouseEnter(item.label)(e);
+                      }}
+                      onMouseLeave={handleMouseLeave}
                       className={cn(
-                        'group flex items-center justify-between transition-all duration-200 cursor-pointer w-full rounded-full px-5 py-3.5 font-medium select-none',
+                        'group flex items-center h-[50px] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer select-none overflow-hidden shrink-0',
+                        collapsed
+                          ? 'w-[50px] rounded-2xl justify-start'
+                          : 'w-full rounded-full justify-between pr-3',
                         isActive
                           ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
                           : 'text-slate-600 hover:bg-white/70 hover:text-ink'
                       )}
                     >
-                      <div className="flex items-center gap-3.5">
-                        <Icon
+                      <div className="flex items-center min-w-0">
+                        {/* Stable fixed icon box */}
+                        <div className="w-[50px] h-[50px] flex items-center justify-center shrink-0">
+                          <Icon
+                            className={cn(
+                              'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                              isActive ? 'text-white' : 'text-slate-500'
+                            )}
+                            aria-hidden="true"
+                          />
+                        </div>
+
+                        {/* Animated sliding text */}
+                        <div
                           className={cn(
-                            'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
-                            isActive ? 'text-white' : 'text-slate-500'
+                            'overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center',
+                            collapsed
+                              ? 'max-w-0 opacity-0 -translate-x-3 pointer-events-none'
+                              : 'max-w-[120px] opacity-100 translate-x-0'
                           )}
-                          aria-hidden="true"
-                        />
-                        <span className="whitespace-nowrap overflow-hidden text-[15px]">
-                          {item.label}
-                        </span>
+                        >
+                          <span className="text-[15px] font-medium tracking-normal select-none">
+                            {item.label}
+                          </span>
+                        </div>
                       </div>
 
+                      {/* Dropdown toggle chevron */}
                       <span
                         role="button"
                         tabIndex={0}
@@ -231,7 +235,10 @@ function AdminSidebarInner({
                             setMessagesOpen((prev) => !prev);
                           }
                         }}
-                        className="p-1.5 -mr-1 rounded-full hover:bg-white/20 transition cursor-pointer flex items-center justify-center"
+                        className={cn(
+                          'p-1.5 rounded-full hover:bg-white/20 transition cursor-pointer flex items-center justify-center shrink-0 transition-all duration-300',
+                          collapsed ? 'w-0 opacity-0 scale-50 pointer-events-none hidden' : 'w-7 opacity-100 scale-100'
+                        )}
                       >
                         <ChevronDown
                           className={cn(
@@ -245,8 +252,8 @@ function AdminSidebarInner({
                   </div>
 
                   {/* Dropdown Menu in Sidebar for Broadcast & Group Message */}
-                  {messagesOpen && (
-                    <div className="ml-5 pl-3 border-l-2 border-indigo-200/70 space-y-1 py-1 animate-in fade-in-50 duration-200">
+                  {!collapsed && messagesOpen && (
+                    <div className="ml-6 pl-3 border-l-2 border-indigo-200/70 space-y-1 py-1 mt-1 animate-in fade-in-50 duration-200">
                       <Link
                         href="/admin/messages?tab=broadcast"
                         prefetch={true}
@@ -303,40 +310,49 @@ function AdminSidebarInner({
                 onClick={onNavigate}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'group flex items-center transition-all duration-200 cursor-pointer shrink-0',
+                  'group flex items-center h-[50px] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer select-none overflow-hidden shrink-0',
                   collapsed
-                    ? 'h-[50px] w-[50px] justify-center rounded-2xl'
-                    : 'w-full gap-3.5 rounded-full px-5 py-3.5 font-medium',
+                    ? 'w-[50px] rounded-2xl justify-start'
+                    : 'w-full rounded-full justify-start',
                   isActive
                     ? 'bg-gradient-to-b from-[#2832A4] to-[#4A57EA] text-white font-semibold shadow-md shadow-[#2832A4]/25'
                     : 'text-slate-600 hover:bg-white/70 hover:text-ink'
                 )}
               >
-                <Icon
+                {/* Stable fixed icon box */}
+                <div className="w-[50px] h-[50px] flex items-center justify-center shrink-0">
+                  <Icon
+                    className={cn(
+                      'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
+                      isActive ? 'text-white' : 'text-slate-500'
+                    )}
+                    aria-hidden="true"
+                  />
+                </div>
+
+                {/* Animated sliding text */}
+                <div
                   className={cn(
-                    'h-6 w-6 shrink-0 transition-transform duration-200 group-hover:scale-110',
-                    isActive ? 'text-white' : 'text-slate-500'
-                  )}
-                  aria-hidden="true"
-                />
-                <span
-                  className={cn(
-                    'transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden text-[15px]',
-                    collapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[160px] opacity-100'
+                    'overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center',
+                    collapsed
+                      ? 'max-w-0 opacity-0 -translate-x-3 pointer-events-none'
+                      : 'max-w-[150px] opacity-100 translate-x-0'
                   )}
                 >
-                  {item.label}
-                </span>
+                  <span className="text-[15px] font-medium tracking-normal select-none">
+                    {item.label}
+                  </span>
+                </div>
               </Link>
             );
           })}
         </nav>
 
-        {/* Logout Button: exact same pt-4 and Y position in both opened and collapsed */}
+        {/* Logout Button: exact same pt-4 and Y position with smooth animated morphing */}
         <div
           className={cn(
-            'shrink-0 pt-4 transition-all duration-300 ease-in-out',
-            collapsed ? 'w-full flex justify-center' : 'w-full px-1'
+            'shrink-0 pt-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+            collapsed ? 'w-[50px] flex justify-center' : 'w-full'
           )}
         >
           <button
@@ -345,29 +361,33 @@ function AdminSidebarInner({
             onMouseEnter={handleMouseEnter('Logout', true)}
             onMouseLeave={handleMouseLeave}
             className={cn(
-              'flex items-center justify-center bg-gradient-to-b from-[#FF1F1F] to-[#FF5A5F] hover:brightness-105 text-white shadow-md transition-all duration-300 ease-in-out hover:shadow-lg cursor-pointer active:scale-95 shrink-0',
+              'group flex items-center h-[50px] bg-gradient-to-b from-[#FF1F1F] to-[#FF5A5F] hover:brightness-105 text-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:shadow-lg cursor-pointer active:scale-95 shrink-0 overflow-hidden',
               collapsed
-                ? 'h-[50px] w-[50px] rounded-2xl p-0'
-                : 'w-full gap-2.5 rounded-full py-3.5 px-6 text-[15px] font-semibold'
+                ? 'w-[50px] rounded-2xl justify-start'
+                : 'w-full rounded-full justify-start'
             )}
           >
-            <LogOut className="h-6 w-6 shrink-0" aria-hidden="true" />
+            {/* Stable fixed icon box */}
+            <div className="w-[50px] h-[50px] flex items-center justify-center shrink-0">
+              <LogOut className="h-6 w-6 shrink-0" aria-hidden="true" />
+            </div>
 
-            <span
+            {/* Animated sliding text */}
+            <div
               className={cn(
-                'transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden text-[15px] font-semibold',
+                'overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center',
                 collapsed
-                  ? 'max-w-0 opacity-0 pointer-events-none'
-                  : 'max-w-[100px] opacity-100'
+                  ? 'max-w-0 opacity-0 -translate-x-3 pointer-events-none'
+                  : 'max-w-[90px] opacity-100 translate-x-0'
               )}
             >
-              Logout
-            </span>
+              <span className="text-[15px] font-semibold select-none">Logout</span>
+            </div>
           </button>
         </div>
       </div>
 
-      {/* Floating Tooltip in Collapsed Mode (Fixed positioning prevents clipping and layout breakage) */}
+      {/* Floating Tooltip in Collapsed Mode */}
       {collapsed && hoveredItem && !collapsedFlyoutOpen && (
         <div
           role="tooltip"
