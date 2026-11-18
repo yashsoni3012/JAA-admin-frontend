@@ -35,6 +35,7 @@ function AdminSidebarInner({
   // Read current message tab reactively from searchParams
   const tab = searchParams?.get('tab');
   const isGroupActive = tab === 'group' || tab === 'groups' || tab === 'group_message';
+  const isMessagesActive = pathname === '/admin/messages' || pathname.startsWith('/admin/messages/');
 
   // Close collapsed flyout and tooltip when route changes or when un-collapsing
   useEffect(() => {
@@ -436,7 +437,7 @@ function AdminSidebarInner({
               }}
               className={cn(
                 'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition',
-                isActive && !isGroupActive
+                isMessagesActive && !isGroupActive
                   ? 'bg-indigo-50 text-[#2832A4] font-bold'
                   : 'text-slate-600 hover:bg-slate-50'
               )}
@@ -453,7 +454,7 @@ function AdminSidebarInner({
               }}
               className={cn(
                 'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition mt-1',
-                isActive && isGroupActive
+                isMessagesActive && isGroupActive
                   ? 'bg-indigo-50 text-[#2832A4] font-bold'
                   : 'text-slate-600 hover:bg-slate-50'
               )}
