@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "npm run clean && next dev",
-    "clean": "node -e \"try{fs.rmSync('.next',{recursive:true,force:true})}catch(e){}\"",
+    "clean": "node -e \"try{fs.rmSync('.next',{recursive:true,force:true});fs.mkdirSync('.next/server',{recursive:true});fs.writeFileSync('.next/server/middleware-manifest.json',JSON.stringify({sortedMiddleware:[],middleware:{},functions:{},version:3}))}catch(e){}\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
